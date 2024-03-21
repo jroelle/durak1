@@ -2,7 +2,7 @@
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode{ 1000, 1000 }, "durak");
+    sf::RenderWindow window(sf::VideoMode{ 500, 500 }, "durak");
     window.setFramerateLimit(144);
 
     while (window.isOpen())
