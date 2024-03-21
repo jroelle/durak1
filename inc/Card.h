@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <list>
 
 class Card
 {
@@ -46,4 +47,15 @@ public:
 private:
 	Suit _suit;
 	Rank _rank;
+};
+
+class Cards
+{
+public:
+	void Add(const Card&);
+	void MoveTo(const Card&, Cards&);
+	void Remove(const Card&);
+
+private:
+	std::list<Card> _cards;
 };
