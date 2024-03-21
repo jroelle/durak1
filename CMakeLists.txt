@@ -20,7 +20,7 @@ add_executable(durak1 main.cpp
 					"inc/Player.h"
 					"src/Player.cpp"
 					"inc/PlayersGroup.h"
-					"src/PlayerGroup.cpp"
+					"src/PlayersGroup.cpp"
 					"inc/Round.h"
 					"src/Round.cpp"
 					"inc/UI.h"
