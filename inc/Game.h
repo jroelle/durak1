@@ -7,9 +7,9 @@ class Game
 {
 public:
 	Game();
-	std::shader_ptr<Context> GetContext() const;
+	std::shared_ptr<Context> GetContext() const;
 	void Run();
 
 private:
-	std::shader_ptr<Context> _context;
+	std::shared_ptr<Context> _context;
 };

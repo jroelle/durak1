@@ -7,7 +7,7 @@ Game::Game()
 {
 }
 
-std::shader_ptr<Context> Game::GetContext() const
+std::shared_ptr<Context> Game::GetContext() const
 {
 	return _context;
 }
