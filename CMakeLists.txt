@@ -4,8 +4,34 @@ project(durak1)
 
 find_package(SFML 2.6 COMPONENTS graphics window system CONFIG REQUIRED)
 
-add_executable(durak1 main.cpp "inc/Card.h"  "inc/Game.h" "src/Game.cpp" "inc/Hand.h" "src/Hand.cpp" "inc/Deck.h" "src/Deck.cpp" "inc/AI.h" "src/AI.cpp" "inc/Actor.h" "src/Actor.cpp" "inc/Player.h" "src/Player.cpp")
+add_executable(durak1 main.cpp
+					"inc/Bot.h"
+					"src/Bot.cpp"
+					"inc/Card.h"
+					"src/Card.cpp"
+					"inc/Context.h"
+					"src/Context.cpp"
+					"inc/Deck.h"
+					"src/Deck.cpp"
+					"inc/Game.h"
+					"src/Game.cpp"
+					"inc/Hand.h"
+					"src/Hand.cpp"
+					"inc/Player.h"
+					"src/Player.cpp"
+					"inc/PlayersGroup.h"
+					"src/PlayerGroup.cpp"
+					"inc/Round.h"
+					"src/Round.cpp"
+					"inc/UI.h"
+					"src/UI.cpp"
+					"inc/User.h"
+					"src/User.cpp"
+					"inc/Utility.hpp"
+)
 
 target_link_libraries(durak1 PRIVATE sfml-graphics sfml-window sfml-system)
 
 target_include_directories(durak1 PRIVATE inc)
+
+target_compile_features(durak1 PRIVATE cxx_std_20)

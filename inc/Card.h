@@ -1,6 +1,5 @@
 #pragma once
 #include <stdint.h>
-#include <list>
 
 class Card
 {
@@ -29,33 +28,15 @@ public:
 	};
 
 	Card() = delete;
-	Card(Suit suit, Rank rank)
-		: _suit(suit)
-		, _rank(rank)
-	{}
+	Card(Suit, Rank);
 
-	Suit GetSuit() const
-	{
-		return _suit;
-	}
+	Suit GetSuit() const;
+	Rank GetRank() const;
 
-	Rank GetRank() const
-	{
-		return _rank;
-	}
+	bool IsTrump(Suit) const;
+	bool Beats(const Card&, Suit trumpSuit) const;
 
 private:
 	Suit _suit;
 	Rank _rank;
-};
-
-class Cards
-{
-public:
-	void Add(const Card&);
-	void MoveTo(const Card&, Cards&);
-	void Remove(const Card&);
-
-private:
-	std::list<Card> _cards;
 };

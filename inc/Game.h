@@ -1,17 +1,15 @@
 #pragma once
+#include <memory>
+
+class Context;
 
 class Game
 {
 public:
-	void Reset();
-
-	//Suit GetTrumpSuit() const
-	//{
-	//	return _deck.GetLast();
-	//}
+	Game();
+	std::shader_ptr<Context> GetContext() const;
+	void Run();
 
 private:
-	// AI _ai;
-	// Player _player;
-	// Deck _deck;
+	std::shader_ptr<Context> _context;
 };
