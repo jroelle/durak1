@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include "IObserver.h"
 
 namespace sf
@@ -11,7 +12,9 @@ class UI : public IObserver
 public:
 	UI() = delete;
 	UI(sf::RenderWindow&);
+	~UI();
 
+	sf::RenderWindow& GetWindow() const;
 	void Update();
 
 	void OnRoundUpdate(const Round&) override;
@@ -20,5 +23,8 @@ public:
 	void OnUserLose(const Player& opponent) override;
 
 private:
+	class Objects;
+
 	sf::RenderWindow& _window;
+	std::unique_ptr<Objects> _objects;
 };

@@ -1,7 +1,6 @@
 #pragma once
 #include <memory>
-#include <map>
-#include <vector>
+#include <forward_list>
 #include <functional>
 #include "Card.h"
 
@@ -17,21 +16,21 @@ public:
 	~PlayersGroup();
 	void DrawCards(Deck&, Index start = 0);
 
-	Index Next(Index, bool onlyWithCards) const;
+	Index Next(Index) const;
 	Player& Get(Index);
 	const Player& Get(Index) const;
 	size_t GetCount() const;
 	Index GetUserIndex() const;
 
-	using Callback = std::function<bool(Player&)>;
-	bool ForEach(const Callback&, bool onlyWithCards, Index start = 0);
+	using RemoveIfCallback = std::function<bool(const Player&)>;
+	void RemoveIf(const RemoveIfCallback&);
 
-	using ConstCallback = std::function<bool(const Player&)>;
-	bool ForEach(const ConstCallback&, bool onlyWithCards, Index start = 0) const;
+	using ForEachCallback = std::function<bool(Player&)>;
+	bool ForEach(const ForEachCallback&, Index start = 0);
+
+	using ConstForEachCallback = std::function<bool(const Player&)>;
+	bool ForEach(const ConstForEachCallback&, Index start = 0) const;
 
 private:
-	Index getNext(Index) const;
-
-private:
-	std::vector<std::unique_ptr<Player>> _playerLoop;
+	std::forward_list<std::unique_ptr<Player>> _playerLoop;
 };

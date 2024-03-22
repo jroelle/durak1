@@ -30,6 +30,7 @@ add_executable(durak1 main.cpp
 					"src/UI.cpp"
 					"inc/User.h"
 					"src/User.cpp"
+					"inc/Utility.hpp"
 )
 
 target_link_libraries(durak1 PRIVATE sfml-graphics sfml-window sfml-system)

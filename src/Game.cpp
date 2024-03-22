@@ -1,8 +1,25 @@
 #include "Game.h"
+#include <thread>
 #include <SFML/Graphics.hpp>
 #include "Context.h"
 #include "Round.h"
 #include "UI.h"
+
+namespace
+{
+	void renderingThread(std::shared_ptr<UI> ui)
+	{
+		ui->GetWindow().setVerticalSyncEnabled(true);
+		ui->GetWindow().setActive(true);
+
+		while (ui->GetWindow().isOpen())
+		{
+			ui->GetWindow().clear();
+			ui->Update();
+			ui->GetWindow().display();
+		}
+	}
+}
 
 Game::Game()
 	: _context(std::make_shared<Context>(2))
@@ -17,9 +34,11 @@ std::shared_ptr<Context> Game::GetContext() const
 void Game::Run()
 {
 	sf::RenderWindow window(sf::VideoMode{ 500, 500 }, "durak");
-	window.setVerticalSyncEnabled(true);
+	window.setActive(false);
 
 	auto ui = std::make_shared<UI>(window);
+	std::thread render(&renderingThread, ui);
+
 	while (window.isOpen())
 	{
 		for (auto event = sf::Event{}; window.pollEvent(event);)
@@ -34,14 +53,11 @@ void Game::Run()
 		round->AddObserver(ui);
 		while (round)
 		{
-			// TODO
-			// ...
-
 			round = round->Run();
 		}
 
-		window.clear();
-		ui->Update();
-		window.display();
+		//window.clear();
+		//ui->Update();
+		//window.display();
 	}
 }

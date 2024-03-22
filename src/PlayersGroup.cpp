@@ -21,25 +21,12 @@ void PlayersGroup::DrawCards(Deck& deck, Index start)
 		{
 			player.DrawCards(deck);
 			return deck.IsEmpty();
-		}, false, start);
+		}, start);
 }
 
-PlayersGroup::Index PlayersGroup::Next(Index i, bool onlyWithCards) const
+PlayersGroup::Index PlayersGroup::Next(Index i) const
 {
-	if (!onlyWithCards)
-		return getNext(i);
-
-	size_t next = i;
-	for (size_t step = 0; step < _playerLoop.size(); ++step)
-	{
-		next = getNext(next);
-		if (next == i)
-			break;
-
-		if (Get(next).HasAnyCards())
-			return next;
-	}
-	return -1;
+	return (i + 1) % _playerLoop.size();
 }
 
 Player& PlayersGroup::Get(Index i)
@@ -62,9 +49,14 @@ PlayersGroup::Index PlayersGroup::GetUserIndex() const
 	return 0;
 }
 
-bool PlayersGroup::ForEach(const Callback& callback, bool onlyWithCards, Index start)
+void PlayersGroup::RemoveIf(const RemoveIfCallback& removeIf)
 {
-	for (size_t i = start; i < GetCount(); i = Next(i, onlyWithCards))
+	_playerLoop.erase(std::remove_if(_playerLoop.begin(), _playerLoop.end(), removeIf));
+}
+
+bool PlayersGroup::ForEach(const ForEachCallback& callback, Index start)
+{
+	for (size_t i = start; i < GetCount(); ++i)
 	{
 		if (callback(Get(i)))
 			return true;
@@ -72,17 +64,12 @@ bool PlayersGroup::ForEach(const Callback& callback, bool onlyWithCards, Index s
 	return false;
 }
 
-bool PlayersGroup::ForEach(const ConstCallback& callback, bool onlyWithCards, Index start) const
+bool PlayersGroup::ForEach(const ConstForEachCallback& callback, Index start) const
 {
-	for (size_t i = start; i < GetCount(); i = Next(i, onlyWithCards))
+	for (size_t i = start; i < GetCount(); ++i)
 	{
 		if (callback(Get(i)))
 			return true;
 	}
 	return false;
-}
-
-PlayersGroup::Index PlayersGroup::getNext(Index i) const
-{
-	return (i + 1) % _playerLoop.size();
 }

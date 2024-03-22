@@ -22,7 +22,7 @@ namespace
 			{
 				player.DrawCards(context.GetDeck());
 				return false;
-			}, false, context.GetPlayers().Next(context.GetDefenderIndex(), false));
+			}, context.GetPlayers().Next(context.GetDefenderIndex()));
 		context.GetDefender().DrawCards(context.GetDeck());
 	}
 }
@@ -35,7 +35,7 @@ Round::Round(std::shared_ptr<Context> context)
 
 std::unique_ptr<Round> Round::Run()
 {
-	const auto& players = _context->GetPlayers();
+	auto& players = _context->GetPlayers();
 	auto& roundCards = _context->GetRoundCards();
 	auto& attacker = _context->GetAttacker();
 	auto& defender = _context->GetDefender();
@@ -46,15 +46,14 @@ std::unique_ptr<Round> Round::Run()
 		auto attackCard = attacker.Attack(*_context);
 		if (!attackCard)
 		{
-			const bool onlyPlayersWithCards = true;
-			const auto idlePlayerIndex = players.Next(_context->GetDefenderIndex(), onlyPlayersWithCards);
+			const auto idlePlayerIndex = players.Next(_context->GetDefenderIndex());
 			if (idlePlayerIndex != _context->GetAttackerIndex() && idlePlayerIndex != _context->GetDefenderIndex())
 			{
 				_context->GetPlayers().ForEach([this, &attackCard](Player& player)
 					{
 						attackCard = player.Attack(*_context);
 						return attackCard.has_value();
-					}, onlyPlayersWithCards, players.Next(_context->GetDefenderIndex(), onlyPlayersWithCards));
+					}, players.Next(_context->GetDefenderIndex()));
 			}
 		}
 
@@ -73,6 +72,12 @@ std::unique_ptr<Round> Round::Run()
 		}
 		break;
 	}
+
+	HandleEvent([this](IObserver& observer)
+		{
+			observer.OnRoundUpdate(*this);
+		});
+
 	roundCards.clear();
 	drawCards(*_context);
 
@@ -82,6 +87,11 @@ std::unique_ptr<Round> Round::Run()
 
 	if (_context->GetDeck().IsEmpty() && !playersHaveAnyCards(players, userIndex))
 		return nullptr;
+
+	players.RemoveIf([](const Player& player)
+		{
+			return !player.HasAnyCards();
+		});
 
 	_context->ToNextAttacker();
 	return std::make_unique<Round>(_context);

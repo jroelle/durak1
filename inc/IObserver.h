@@ -28,7 +28,7 @@ public:
 
 	void AddObserver(std::weak_ptr<IObserver> observer)
 	{
-		_list.push_back(std::move(observer));
+		_list.push_front(std::move(observer));
 	}
 
 	using EventCallback = std::function<void(IObserver&)>;
