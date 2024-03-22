@@ -27,6 +27,8 @@ public:
 	}
 
 protected:
+	Player() = default;
+
 	virtual std::optional<Card> pickAttackCard(const Context&) const = 0;
 	virtual std::optional<Card> pickDefendCard(const Context& , const Card&) const = 0;
 

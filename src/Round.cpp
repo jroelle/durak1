@@ -28,7 +28,8 @@ namespace
 }
 
 Round::Round(std::shared_ptr<Context> context)
-	: _context(context)
+	: Observed()
+	, _context(context)
 {
 }
 
@@ -84,4 +85,10 @@ std::unique_ptr<Round> Round::Run()
 
 	_context->ToNextAttacker();
 	return std::make_unique<Round>(_context);
+}
+
+
+std::shared_ptr<Context> Round::GetContext() const
+{
+	return _context;
 }
