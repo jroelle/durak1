@@ -1,5 +1,7 @@
 #pragma once
 #include <utility>
+#include <unordered_set>
+#include <memory>
 
 namespace utility
 {
@@ -38,52 +40,122 @@ namespace utility
 	private:
 		T _value;
 		list_element* _next = nullptr;
+
+		friend class loop_list;
 	};
 
 	template<typename T>
-	class loop final
+	class loop_list final
 	{
 	public:
 		using element = list_element<T>;
+		using storage = std::unordered_set<element*>;
 
-		element* push(T&& value)
+		element* push(std::unique_ptr<element>&& ptr)
 		{
-			return push(element(std::forward<T>(value)...));
+			return push(ptr.release());
 		}
 
 		template<typename... Args>
 		element* emplace(Args&&... args)
 		{
-			return push(element(std::forward<Args>(args)...));
+			return push(new element(std::forward<Args>(args)...));
 		}
 
 		element* erase(element* elem)
 		{
 			if (!elem)
 				return nullptr;
-
+			
 			if (elem == _root)
 				_root = elem->next();
-			
 
+			auto* p = previous(elem);
+			auto* n = elem->next();
+			p->_next = n;
+
+			remove_from_storage(elem);
 		}
 
 		template<typename F>
 		bool for_each(element* start, const F& callback)
 		{
-			for (element* elem = start; elem != start && elem->next() != start; elem = elem->next())
-			{
+			if (!start || !_root)
+				return false;
 
-			}
+			element* elem = start;
+			do
+			{
+				if (callback(elem))
+					return true;
+				elem = elem->next();
+
+			} while (elem != start);
+
+			return false;
+		}
+
+		template<typename F>
+		bool for_each(const F& callback)
+		{
+			return for_each(_root, callback);
+		}
+
+		element* previous(element* elem) const
+		{
+			if (!_root || !elem)
+				return nullptr;
+
+			element* iter = _root;
+			while (iter->next() != elem)
+				iter = iter->next();
+
+			return iter;
+		}
+
+		~unordered_loop_list()
+		{
+			for (auto* elem : _storage)
+				delete elem;
 		}
 
 	private:
 		element* push(element* elem)
 		{
+			if (!elem)
+				return nullptr;
 
+			add_to_storage(elem);
+			if (_root)
+			{
+				auto* last = previous(_root);
+				elem->_next = _root;
+				last->_next = elem;
+			}
+			else
+			{
+				_root = elem;
+				elem->_next = _root;
+			}
+		}
+
+		void add_to_storage(element* elem)
+		{
+			_storage.insert(elem);
+		}
+
+		void remove_from_storage(element* elem)
+		{
+			auto iter = _storage.find(elem);
+			if (iter != _storage.end())
+			{
+				delete (*iter);
+				_storage.erase(iter);
+			}
 		}
 
 	private:
 		element* _root = nullptr;
+		storage _storage;
 	};
 }
