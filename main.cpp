@@ -17,6 +17,7 @@ int main()
         }
 
         window.clear();
+        // TODO: draw
         window.display();
     }
 }

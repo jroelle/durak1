@@ -2,6 +2,8 @@
 
 project(durak1)
 
+set(SFML_STATIC_LIBRARIES TRUE)
+
 find_package(SFML 2.6 COMPONENTS graphics window system CONFIG REQUIRED)
 
 add_executable(durak1 main.cpp
@@ -27,7 +29,6 @@ add_executable(durak1 main.cpp
 					"src/UI.cpp"
 					"inc/User.h"
 					"src/User.cpp"
-					"inc/Utility.hpp"
 )
 
 target_link_libraries(durak1 PRIVATE sfml-graphics sfml-window sfml-system)

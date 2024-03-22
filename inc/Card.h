@@ -30,6 +30,8 @@ public:
 	Card() = delete;
 	Card(Suit, Rank);
 
+	bool operator==(const Card&) const = default;
+
 	Suit GetSuit() const;
 	Rank GetRank() const;
 

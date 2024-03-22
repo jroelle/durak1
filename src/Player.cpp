@@ -1,16 +1,17 @@
 #include "Player.h"
 #include "Deck.h"
+#include "Context.h"
 
-std::optional<Card> Player::Attack(const Player& opponent)
+std::optional<Card> Player::Attack(const Context& context)
 {
-	const auto attackCard = pickAttackCard(opponent);
+	const auto attackCard = pickAttackCard(context);
 	removeCard(attackCard);
 	return attackCard;
 }
 
-std::optional<Card> Player::Defend(const Player& opponent, const Card& attackCard)
+std::optional<Card> Player::Defend(const Context& context, const Card& attackCard)
 {
-	const auto defendCard = pickDefendCard(opponent, attackCard);
+	const auto defendCard = pickDefendCard(context, attackCard);
 	removeCard(defendCard);
 	return defendCard;
 }
@@ -27,16 +28,26 @@ std::optional<Card> Player::FindLowestTrumpCard(Card::Suit trumpSuit) const
 	std::optional<Card> lowest;
 	_hand.ForEachCard([&lowest, trumpSuit](const Card& card)
 		{
-			if (card.IsTrump(trumpSuit) && (!lowest || *lowest > trumpSuit))
-				lowest = card;
+			if (card.IsTrump(trumpSuit) && (!lowest || card.GetRank() < lowest->GetRank()))
+				lowest.emplace(card);
 
 			return lowest && lowest->GetRank() == Card::Rank::Min;
 		});
 	return lowest;
 }
 
+size_t Player::GetCardCount() const
+{
+	return _hand.GetCardCount();
+}
+
+bool Player::HasAnyCards() const
+{
+	return !_hand.IsEmpty();
+}
+
 void Player::removeCard(const std::optional<Card>& card)
 {
 	if (card)
-		return _hand.RemoveCard(*card);
+		_hand.RemoveCard(*card);
 }

@@ -4,6 +4,6 @@
 class User final : public Player
 {
 protected:
-	std::optional<Card> pickAttackCard(const Player&) const override;
-	std::optional<Card> pickDefendCard(const Player&, const Card&) const override;
+	std::optional<Card> pickAttackCard(const Context&) const override;
+	std::optional<Card> pickDefendCard(const Context&, const Card&) const override;
 };

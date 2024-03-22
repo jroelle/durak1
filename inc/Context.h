@@ -1,6 +1,7 @@
 #pragma once
-#include <functional>
 #include <optional>
+#include <unordered_map>
+#include <list>
 #include "Deck.h"
 #include "PlayersGroup.h"
 #include "Card.h"
@@ -8,8 +9,10 @@
 class Context
 {
 public:
+	using RoundCards = std::vector<Card>;
+
 	Context() = delete;
-	Context(size_t aiNumber = 1);
+	Context(size_t botsNumber = 1);
 
 	Deck& GetDeck();
 	const Deck& GetDeck() const;
@@ -17,24 +20,24 @@ public:
 	PlayersGroup& GetPlayers();
 	const PlayersGroup& GetPlayers() const;
 
+	PlayersGroup::Index GetAttackerIndex() const;
 	Player& GetAttacker();
 	const Player& GetAttacker() const;
 
+	PlayersGroup::Index GetDefenderIndex() const;
 	Player& GetDefender();
 	const Player& GetDefender() const;
 
-	using Callback = std::function<void(Player&)>;
-	void ForEachOtherPlayer(const Callback&);
-
-	using ConstCallback = std::function<void(const Player&)>;
-	void ForEachOtherPlayer(const ConstCallback&) const;
-
-	void Card::Suit GetTrumpSuit() const;
+	Card::Suit GetTrumpSuit() const;
 	void ToNextAttacker();
+
+	RoundCards& GetRoundCards();
+	const RoundCards& GetRoundCards() const;
 
 private:
 	Deck _deck;
 	PlayersGroup _players;
 	PlayersGroup::Index _attackerIndex;
 	Card::Suit _trumpSuit;
+	RoundCards _roundCards;
 };

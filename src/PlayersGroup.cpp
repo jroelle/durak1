@@ -1,64 +1,88 @@
 #include "PlayersGroup.h"
 #include "User.h"
 #include "Bot.h"
+#include "Deck.h"
 
 PlayersGroup::PlayersGroup(size_t botsNumber)
 {
-	_loop_vector.vector().reserve(botsNumber + 1);
-	_loop_vector.vector().push_back(std::make_unique<User>());
+	_playerLoop.reserve(botsNumber + 1);
+	_playerLoop.push_back(std::make_unique<User>());
 	for (size_t i = 0; i < botsNumber; ++i)
-		_loop_vector.vector().push_back(std::make_unique<Bot>());
+		_playerLoop.push_back(std::make_unique<Bot>());
 }
 
-void PlayersGroup::DrawCards(Deck& deck)
+PlayersGroup::~PlayersGroup()
+{
+}
+
+void PlayersGroup::DrawCards(Deck& deck, Index start)
 {
 	ForEach([&deck](Player& player)
 		{
 			player.DrawCards(deck);
-		});
+			return deck.IsEmpty();
+		}, false, start);
 }
 
-PlayersGroup::LowestTrumpCards PlayersGroup::FindLowestTrumpCard(Card::Suit trumpSuit) const
+PlayersGroup::Index PlayersGroup::Next(Index i, bool onlyWithCards) const
 {
-	LowestTrumpCards lowestTrumpCards;
-	for (Index i = 0; i < GetCount(); ++i)
-		lowestTrumpCards[i] = Get(i).FindLowestTrumpCard(trumpSuit);
-	return lowestTrumpCards;
-}
+	if (!onlyWithCards)
+		return getNext(i);
 
-PlayersGroup::Index PlayersGroup::Next(Index i) const
-{
-	return _loop_vector.next(std::next(_loop_vector.begin(), i));
+	size_t next = i;
+	for (size_t step = 0; step < _playerLoop.size(); ++step)
+	{
+		next = getNext(next);
+		if (next == i)
+			break;
+
+		if (Get(next).HasAnyCards())
+			return next;
+	}
+	return -1;
 }
 
 Player& PlayersGroup::Get(Index i)
 {
-	return const_cast<Player&>(const_cast<const Player&>(Get(i)));
+	return const_cast<Player&>(const_cast<const PlayersGroup*>(this)->Get(i));
 }
 
 const Player& PlayersGroup::Get(Index i) const
 {
-	return *_loop_vector.vector().at(i);
+	return *_playerLoop.at(i);
 }
 
 size_t PlayersGroup::GetCount() const
 {
-	return _loop_vector.vector().size();
+	return _playerLoop.size();
 }
 
-void PlayersGroup::Remove(Index i)
+PlayersGroup::Index PlayersGroup::GetUserIndex() const
 {
-	_loop_vector.vector().erase(std::next(_loop_vector.vector().begin(), i));
+	return 0;
 }
 
-void PlayersGroup::ForEach(const Callback& callback)
+bool PlayersGroup::ForEach(const Callback& callback, bool onlyWithCards, Index start)
 {
-	for (size_t i = 0; i < GetCount(); ++i)
-		callback(Get(i));
+	for (size_t i = start; i < GetCount(); i = Next(i, onlyWithCards))
+	{
+		if (callback(Get(i)))
+			return true;
+	}
+	return false;
 }
 
-void PlayersGroup::ForEach(const ConstCallback& callback) const
+bool PlayersGroup::ForEach(const ConstCallback& callback, bool onlyWithCards, Index start) const
 {
-	for (size_t i = 0; i < GetCount(); ++i)
-		callback(Get(i));
+	for (size_t i = start; i < GetCount(); i = Next(i, onlyWithCards))
+	{
+		if (callback(Get(i)))
+			return true;
+	}
+	return false;
+}
+
+PlayersGroup::Index PlayersGroup::getNext(Index i) const
+{
+	return (i + 1) % _playerLoop.size();
 }

@@ -3,7 +3,7 @@
 #include "Round.h"
 
 Game::Game()
-	: _context(2)
+	: _context(std::make_shared<Context>(2))
 {
 }
 

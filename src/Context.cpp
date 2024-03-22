@@ -1,39 +1,36 @@
 #include "Context.h"
+#include <set>
+#include "Player.h"
 
 namespace
 {
-	inline void forEachOtherPlayer(const auto& players, const auto& callback)
+	inline PlayersGroup::Index findFirstPlayer(const PlayersGroup& players, Card::Suit trumpSuit)
 	{
-		for (size_t i = 0; i < players.GetCount(); ++i)
-		{
-			if (auto* player = player.Get(i))
-				callback(*player);
-		}
-	}
-
-	inline PlayersGroup::Index findFirstPlayer(const PlayersGroup& players)
-	{
-		const auto lowestTrumpCards = players.FindLowestTrumpCard();
 		std::optional<std::pair<PlayersGroup::Index, Card>> firstPlayer;
-		for (const auto& [index, card] : lowestTrumpCards)
+		for (PlayersGroup::Index i = 0; i < players.GetCount(); ++i)
 		{
-			if (!firstPlayer || firstPlayer->second.GetRank() > card.GetRank())
-				firstPlayer = { index, card };
+			const auto lowestCard = players.Get(i).FindLowestTrumpCard(trumpSuit);
+			if (lowestCard && (!firstPlayer || lowestCard->GetRank() < firstPlayer->second.GetRank()))
+				firstPlayer.emplace(i, *lowestCard);
+
+			if (firstPlayer && firstPlayer->second.GetRank() == Card::Rank::Min)
+				break;
 		}
 		return firstPlayer ? firstPlayer->first : 0;
 	}
 }
 
-Context::Context(size_t aiNumber)
+Context::Context(size_t botsNumber)
+	: _players(botsNumber)
 {
 	_trumpSuit = _deck.GetLast()->GetSuit();
-	_players.Setup(_deck, 1);
-	_attackerIndex = findFirstPlayer(_players);
+	_players.DrawCards(_deck);
+	_attackerIndex = findFirstPlayer(_players, _trumpSuit);
 }
 
 Deck& Context::GetDeck()
 {
-	return const_cast<Deck&>(const_cast<const Context*>(GetDeck()));
+	return const_cast<Deck&>(const_cast<const Context*>(this)->GetDeck());
 }
 
 const Deck& Context::GetDeck() const
@@ -43,7 +40,7 @@ const Deck& Context::GetDeck() const
 
 PlayersGroup& Context::GetPlayers()
 {
-	return const_cast<PlayersGroup&>(const_cast<const Context*>(GetPlayers()));
+	return const_cast<PlayersGroup&>(const_cast<const Context*>(this)->GetPlayers());
 }
 
 const PlayersGroup& Context::GetPlayers() const
@@ -51,42 +48,52 @@ const PlayersGroup& Context::GetPlayers() const
 	return _players;
 }
 
+PlayersGroup::Index Context::GetAttackerIndex() const
+{
+	return _attackerIndex;
+}
+
 Player& Context::GetAttacker()
 {
-	return const_cast<Player&>(const_cast<const Context*>(GetAttacker()));
+	return const_cast<Player&>(const_cast<const Context*>(this)->GetAttacker());
 }
 
 const Player& Context::GetAttacker() const
 {
-	return _attackerIndex ? _players.Get(*_attackerIndex) : nullptr;
+	return _players.Get(_attackerIndex);
+}
+
+PlayersGroup::Index Context::GetDefenderIndex() const
+{
+	return _players.Next(_attackerIndex, true);
 }
 
 Player& Context::GetDefender()
 {
-	return const_cast<Player&>(const_cast<const Context*>(GetDefender()));
+	return const_cast<Player&>(const_cast<const Context*>(this)->GetDefender());
 }
 
 const Player& Context::GetDefender() const
 {
-	return _attackerIndex ? _players.Get(_players.Next(*_attackerIndex)) : nullptr;
+	return _players.Get(GetDefenderIndex());
 }
 
-void Context::ForEachOtherPlayer(const Callback& callback)
-{
-	forEachOtherPlayer(_players, callback);
-}
-
-void Context::ForEachOtherPlayer(const ConstCallback& callback) const
-{
-	forEachOtherPlayer(_players, callback);
-}
-
-void Card::Suit Context::GetTrumpSuit() const
+Card::Suit Context::GetTrumpSuit() const
 {
 	return _trumpSuit;
 }
 
 void Context::ToNextAttacker()
 {
-	_attackerIndex = _players.Next(_attackerIndex);
+	_attackerIndex = _players.Next(_attackerIndex, true);
+}
+
+Context::RoundCards& Context::GetRoundCards()
+{
+	return const_cast<RoundCards&>(const_cast<const Context*>(this)->GetRoundCards());
+}
+
+const Context::RoundCards& Context::GetRoundCards() const
+{
+	return _roundCards;
 }

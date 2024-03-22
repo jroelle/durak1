@@ -1,9 +1,9 @@
 #pragma once
-#include <functional>
 #include <memory>
 #include <map>
-#include <optional>
-#include "Utility.hpp"
+#include <vector>
+#include <functional>
+#include "Card.h"
 
 class Deck;
 class Player;
@@ -14,26 +14,24 @@ public:
 	using Index = size_t;
 
 	PlayersGroup(size_t botsNumber = 1);
-	void DrawCards(Deck&);
+	~PlayersGroup();
+	void DrawCards(Deck&, Index start = 0);
 
-	using LowestTrumpCards = std::map<Index, std::optional<Card>>;
-	LowestTrumpCards FindLowestTrumpCard(Card::Suit) const;
-
-	Index Next(Index) const;
+	Index Next(Index, bool onlyWithCards) const;
 	Player& Get(Index);
 	const Player& Get(Index) const;
 	size_t GetCount() const;
-	void Remove(Index);
+	Index GetUserIndex() const;
 
-	using Callback = std::function<void(Player&)>;
-	void ForEach(const Callback&);
+	using Callback = std::function<bool(Player&)>;
+	bool ForEach(const Callback&, bool onlyWithCards, Index start = 0);
 
-	using ConstCallback = std::function<void(const Player&)>;
-	void ForEach(const ConstCallback&) const;
+	using ConstCallback = std::function<bool(const Player&)>;
+	bool ForEach(const ConstCallback&, bool onlyWithCards, Index start = 0) const;
 
 private:
-	using Value = std::unique_ptr<Player>;
-	using LoopVector = utility::loop_vector<Value>;
+	Index getNext(Index) const;
 
-	LoopVector _loop_vector;
+private:
+	std::vector<std::unique_ptr<Player>> _playerLoop;
 };
