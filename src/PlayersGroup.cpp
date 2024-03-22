@@ -15,7 +15,7 @@ PlayersGroup::~PlayersGroup()
 {
 }
 
-void PlayersGroup::DrawCards(Deck& deck, Index start)
+void PlayersGroup::DrawCards(Deck& deck, Player* start)
 {
 	ForEach([&deck](Player& player)
 		{

@@ -1,36 +1,33 @@
 #pragma once
-#include <memory>
-#include <forward_list>
 #include <functional>
-#include "Card.h"
+#include "Utility.hpp"
 
 class Deck;
 class Player;
+class User;
 
 class PlayersGroup
 {
 public:
-	using Index = size_t;
-
 	PlayersGroup(size_t botsNumber = 1);
 	~PlayersGroup();
-	void DrawCards(Deck&, Index start = 0);
+	void DrawCards(Deck&, Player* start = nullptr);
 
-	Index Next(Index) const;
-	Player& Get(Index);
-	const Player& Get(Index) const;
+	Player* Next(Player*) const;
+	User* GetUser() const;
 	size_t GetCount() const;
-	Index GetUserIndex() const;
 
 	using RemoveIfCallback = std::function<bool(const Player&)>;
 	void RemoveIf(const RemoveIfCallback&);
 
-	using ForEachCallback = std::function<bool(Player&)>;
-	bool ForEach(const ForEachCallback&, Index start = 0);
+	using ForEachCallback = std::function<bool(Player*)>;
+	bool ForEach(const ForEachCallback&, Player* start = nullptr);
 
-	using ConstForEachCallback = std::function<bool(const Player&)>;
-	bool ForEach(const ConstForEachCallback&, Index start = 0) const;
+	using ConstForEachCallback = std::function<bool(const Player*)>;
+	bool ForEach(const ConstForEachCallback&, Player* start = nullptr) const;
 
 private:
-	std::forward_list<std::unique_ptr<Player>> _playerLoop;
+	using PlayerLoop = utility::loop_list<Player>;
+	PlayerLoop _playerLoop;
+	User* _user = nullptr;
 };

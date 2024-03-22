@@ -6,7 +6,7 @@
 namespace utility
 {
 	template<typename T>
-	class list_element final
+	class list_element final : public T
 	{
 	public:
 		template<typename... Args>
@@ -49,7 +49,20 @@ namespace utility
 	{
 	public:
 		using element = list_element<T>;
-		using storage = std::unordered_set<element*>;
+		using storage = std::unordered_set<holder>;
+
+		loop_list() = default;
+
+		~loop_list()
+		{
+			for (auto* elem : _storage)
+				delete elem;
+		}
+
+		size_t size() const noexcept
+		{
+			return _storage.size();
+		}
 
 		element* push(std::unique_ptr<element>&& ptr)
 		{
@@ -60,6 +73,26 @@ namespace utility
 		element* emplace(Args&&... args)
 		{
 			return push(new element(std::forward<Args>(args)...));
+		}
+
+		template<typename B, typename E>
+		void assign(B begin, E end)
+		{
+			*this = {};
+
+			if (begin == end)
+				return;
+
+			insert_to_storage(begin, end);
+			_root = *begin;
+			for (auto iter = begin; iter != end; ++iter)
+			{
+				auto n = std::next(iter);
+				if (n != end)
+					iter->_next = *n;
+				else
+					iter->_next = _root;
+			}
 		}
 
 		element* erase(element* elem)
@@ -74,7 +107,7 @@ namespace utility
 			auto* n = elem->next();
 			p->_next = n;
 
-			remove_from_storage(elem);
+			erase_from_storage(elem);
 		}
 
 		template<typename F>
@@ -113,10 +146,9 @@ namespace utility
 			return iter;
 		}
 
-		~unordered_loop_list()
+		element* root() const
 		{
-			for (auto* elem : _storage)
-				delete elem;
+			return _root;
 		}
 
 	private:
@@ -125,7 +157,7 @@ namespace utility
 			if (!elem)
 				return nullptr;
 
-			add_to_storage(elem);
+			insert_to_storage(elem);
 			if (_root)
 			{
 				auto* last = previous(_root);
@@ -139,12 +171,12 @@ namespace utility
 			}
 		}
 
-		void add_to_storage(element* elem)
+		void insert_to_storage(element* elem)
 		{
 			_storage.insert(elem);
 		}
 
-		void remove_from_storage(element* elem)
+		void erase_from_storage(element* elem)
 		{
 			auto iter = _storage.find(elem);
 			if (iter != _storage.end())
@@ -152,6 +184,12 @@ namespace utility
 				delete (*iter);
 				_storage.erase(iter);
 			}
+		}
+
+		template<typename B, typename E>
+		void insert_to_storage(B begin, E end)
+		{
+			_storage.insert(begin, end);
 		}
 
 	private:
