@@ -25,7 +25,7 @@ Context::Context(size_t botsNumber)
 	: _players(botsNumber)
 {
 	_trumpSuit = _deck.GetLast()->GetSuit();
-	_players.DrawCards(_deck);
+	_players.DrawCards(_deck, _players.GetUser());
 	_attacker = findFirstPlayer(_players, _trumpSuit);
 }
 

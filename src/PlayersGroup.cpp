@@ -70,7 +70,7 @@ void PlayersGroup::RemoveIf(const RemoveIfCallback& removeIf)
 
 bool PlayersGroup::ForEach(const ForEachCallback& callback, const Player* start) const
 {
-	return _playerLoop.for_each(const_cast<Player*>(start), callback);
+	return _playerLoop.for_each(start ? const_cast<Player*>(start) : GetUser(), callback);
 }
 
 bool PlayersGroup::ForEachIdlePlayer(const ForEachCallback& callback, const Player* attacker) const
@@ -91,11 +91,18 @@ bool PlayersGroup::ForEachAttackPlayer(const ForEachCallback& callback, const Pl
 
 bool PlayersGroup::ForEachOtherPlayer(const ForEachCallback& callback, const Player* exclude, const Player* start) const
 {
-	return _playerLoop.for_each(const_cast<Player*>(start), [&](Player* player)
-		{
-			if (equal(exclude, player))
-				return false;
+	if (start)
+	{
+		return _playerLoop.for_each(const_cast<Player*>(start), [&](Player* player)
+			{
+				if (equal(exclude, player))
+					return false;
 
-			return callback(player);
-		});
+				return callback(player);
+			});
+	}
+	else
+	{
+		return ForEach(callback);
+	}
 }
