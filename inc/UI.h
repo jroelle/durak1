@@ -19,7 +19,7 @@ public:
 
 	sf::RenderWindow& GetWindow();
 	const sf::RenderWindow& GetWindow() const;
-	void Update();
+	void Update(double msDelta);
 	bool HandleEvent(const sf::Event&);
 
 	void OnRoundStart(const Round&) override;

@@ -5,6 +5,7 @@
 #include "UIObject.h"
 #include "Hand.h"
 #include "Card.h"
+#include "Mutex.h"
 
 namespace
 {
@@ -27,11 +28,7 @@ namespace
 	class TransformPainter : public UIPainter
 	{
 	public:
-		TransformPainter(sf::RenderTarget& target, const sf::Vector2f& position, float angleDeg)
-			: UIPainter(target)
-			, _position(position)
-			, _angleDeg(angleDeg)
-		{}
+		using UIPainter::UIPainter;
 		virtual ~TransformPainter() = default;
 
 		void Draw(const sf::Drawable& object) override
@@ -68,18 +65,29 @@ namespace
 
 	private:
 		sf::Vector2f _position;
-		float _angleDeg;
+		float _angleDeg = 0.;
 	};
 }
 
 struct UI::Data
 {
-	std::array<Card, Hand::MinCount * 2> roundCards;
-	// TODO
+	struct Flag
+	{
+		enum Value : int
+		{
+			Default = 0,
+			DraggingCard = 1 << 0,
+		};
+	};
+
+	std::vector<Card> roundCards;
+	std::underlying_type_t<Flag::Value> flags = Flag::Default;
+	sf::Vector2i cursorPosition;
 };
 
 UI::UI(const std::string& title, unsigned int width, unsigned int height)
 	: _window(sf::VideoMode{ width, height }, sf::String(title))
+	, _data(std::make_unique<Data>())
 {
 }
 
@@ -97,9 +105,21 @@ const sf::RenderWindow& UI::GetWindow() const
 	return _window;
 }
 
-void UI::Update()
+void UI::Update(double msDelta)
 {
-	TransformPainter painter(_window, { 200., 200. }, 30.);
+	if (!_data)
+		return;
+
+	Mutex::Guard guard(Mutex::Get());
+	TransformPainter painter(_window);
+
+	if (_data->flags & Data::Flag::DraggingCard)
+	{
+		sf::CircleShape circle(5., 8);
+		circle.setPosition(_window.mapPixelToCoords(_data->cursorPosition));
+		painter.Draw(circle);
+	}
+
 	
 	UIOpenedCard card1(Card{ Card::Suit::Diamonds, Card::Rank::Ace });
 	UIClosedCard card2;
@@ -110,6 +130,22 @@ void UI::Update()
 
 bool UI::HandleEvent(const sf::Event& event)
 {
+	Mutex::Guard guard(Mutex::Get());
+	switch (event.type)
+	{
+	case sf::Event::EventType::MouseButtonPressed:
+		_data->flags |= Data::Flag::DraggingCard;
+		break;
+
+	case sf::Event::EventType::MouseButtonReleased:
+		_data->flags &= ~Data::Flag::DraggingCard;
+		break;
+
+	case sf::Event::EventType::MouseMoved:
+		_data->cursorPosition = sf::Vector2i{ event.mouseMove.x, event.mouseMove.y };
+		break;
+	}
+
 	return false;
 }
 

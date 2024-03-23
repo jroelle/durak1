@@ -20,6 +20,8 @@ add_executable(durak1 main.cpp
 					"inc/Hand.h"
 					"src/Hand.cpp"
 					"inc/IObserver.h"
+					"inc/Mutex.h"
+					"src/Mutex.cpp"
 					"inc/Player.h"
 					"src/Player.cpp"
 					"inc/PlayersGroup.h"
