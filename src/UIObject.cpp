@@ -13,7 +13,7 @@ void UICard::drawOutline(UIPainter& painter) const
 	sf::RectangleShape rect({ Width, Height });
 	rect.setOutlineColor(sf::Color::Blue);
 	rect.setFillColor(sf::Color::White);
-	rect.setOutlineThickness(3.);
+	rect.setOutlineThickness(5.);
 	painter.Draw(rect);
 }
 

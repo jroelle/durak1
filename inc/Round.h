@@ -1,12 +1,12 @@
 #pragma once
 #include <memory>
 #include <vector>
-#include "IObserver.h"
 #include "Hand.h"
 
 class Context;
+class Player;
 
-class Round : public Observed
+class Round
 {
 public:
 	using Cards = std::vector<Card>;

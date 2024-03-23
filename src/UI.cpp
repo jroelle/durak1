@@ -36,7 +36,7 @@ namespace
 			ViewRestorer restorer(_target);
 
 			sf::View view;
-			view.move(_position);
+			view.move(-_position);
 			view.setRotation(_angleDeg);
 			_target.setView(view);
 
@@ -82,7 +82,7 @@ struct UI::Data
 
 	std::vector<Card> roundCards;
 	std::underlying_type_t<Flag::Value> flags = Flag::Default;
-	sf::Vector2i cursorPosition;
+	sf::Vector2f cursorPosition;
 };
 
 UI::UI(const std::string& title, unsigned int width, unsigned int height)
@@ -115,17 +115,10 @@ void UI::Update(double msDelta)
 
 	if (_data->flags & Data::Flag::DraggingCard)
 	{
-		sf::CircleShape circle(5., 8);
-		circle.setPosition(_window.mapPixelToCoords(_data->cursorPosition));
-		painter.Draw(circle);
+		UIOpenedCard card(Card{ Card::Suit::Diamonds, Card::Rank::Ace });
+		painter.SetPosition(_data->cursorPosition);
+		card.Draw(painter);
 	}
-
-	
-	UIOpenedCard card1(Card{ Card::Suit::Diamonds, Card::Rank::Ace });
-	UIClosedCard card2;
-
-	card1.Draw(painter);
-	card2.Draw(painter);
 }
 
 bool UI::HandleEvent(const sf::Event& event)
@@ -142,7 +135,7 @@ bool UI::HandleEvent(const sf::Event& event)
 		break;
 
 	case sf::Event::EventType::MouseMoved:
-		_data->cursorPosition = sf::Vector2i{ event.mouseMove.x, event.mouseMove.y };
+		_data->cursorPosition = _window.mapPixelToCoords({ event.mouseMove.x * 2, event.mouseMove.y * 2 });
 		break;
 	}
 
@@ -192,4 +185,9 @@ void UI::OnUserWin(const Player& user, const Context& context)
 void UI::OnUserLose(const Player& opponent, const Context& context)
 {
 
+}
+
+std::optional<Card> UI::UserPickCard(const User& user)
+{
+	return std::optional<Card>();
 }

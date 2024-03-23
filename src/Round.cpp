@@ -2,6 +2,7 @@
 #include <map>
 #include "Context.h"
 #include "Player.h"
+#include "UI.h"
 
 namespace
 {
@@ -19,6 +20,7 @@ Round::Round(std::shared_ptr<Context> context, Player* attacker)
 
 std::unique_ptr<Round> Round::Run()
 {
+	auto& ui = _context->GetUI();
 	auto& players = _context->GetPlayers();
 
 	auto* attacker = _attacker;
@@ -26,10 +28,7 @@ std::unique_ptr<Round> Round::Run()
 	if (!attacker || !defender)
 		return nullptr;
 
-	HandleEvent([&](IObserver& observer)
-		{
-			observer.OnRoundStart(*this);
-		});
+	ui.OnRoundStart(*this);
 
 	_cards = {};
 	_cards.reserve(Hand::MinCount * 2);
@@ -47,47 +46,30 @@ std::unique_ptr<Round> Round::Run()
 		if (attackCard)
 		{
 			_cards.emplace_back(*attackCard);
-			HandleEvent([&](IObserver& observer)
-				{
-					observer.OnPlayerAttack(*attackerPickedCard, *attackCard);
-				});
+			ui.OnPlayerAttack(*attackerPickedCard, *attackCard);
 
 			if (const auto defendCard = defender->Defend(*_context, *attackCard))
 			{
 				_cards.emplace_back(*defendCard);
-				HandleEvent([&](IObserver& observer)
-					{
-						observer.OnPlayerDefend(*attackerPickedCard, *attackCard, *defendCard);
-					});
+				ui.OnPlayerDefend(*attackerPickedCard, *attackCard, *defendCard);
 			}
 			else
 			{
 				defender->AddCards(_cards.begin(), _cards.end());
-				HandleEvent([&](IObserver& observer)
-					{
-						observer.OnPlayerDrawCards(*defender, *this);
-					});
+				ui.OnPlayerDrawCards(*defender, *this);
 				break;
 			}
 		}
 		break;
 	}
 
-	HandleEvent([&](IObserver& observer)
-		{
-			observer.OnRoundEnd(*this);
-		});
+	ui.OnRoundEnd(*this);
 
 	const auto drawCards = [&](Player* player)
 		{
 			player->DrawCards(_context->GetDeck());
 			if (!_context->GetDeck().IsEmpty())
-			{
-				HandleEvent([&](IObserver& observer)
-					{
-						observer.OnPlayerDrawCards(*player, _context->GetDeck());
-					});
-			}
+				ui.OnPlayerDrawCards(*player, _context->GetDeck());
 			return _context->GetDeck().IsEmpty();
 		};
 
@@ -97,19 +79,13 @@ std::unique_ptr<Round> Round::Run()
 	const auto* user = players.GetUser();
 	if (!user->HasAnyCards())
 	{
-		HandleEvent([&](IObserver& observer)
-			{
-				observer.OnUserWin(*players.GetUser(), *_context);
-			});
+		ui.OnUserWin(*players.GetUser(), *_context);
 		return nullptr;
 	}
 
 	if (_context->GetDeck().IsEmpty() && !players.ForEachOtherPlayer(playerHasAnyCards, user))
 	{
-		HandleEvent([&](IObserver& observer)
-			{
-				observer.OnUserLose(*players.GetUser(), *_context);
-			});
+		ui.OnUserLose(*players.GetUser(), *_context);
 		return nullptr;
 	}
 

@@ -2,8 +2,9 @@
 #include <set>
 #include "Player.h"
 
-Context::Context(size_t botsNumber)
+Context::Context(UI& ui, size_t botsNumber)
 	: _players(botsNumber)
+	, _ui(ui)
 {
 	_trumpSuit = _deck.GetLast()->GetSuit();
 	_players.DrawCards(_deck, _players.GetUser());
@@ -32,4 +33,9 @@ const PlayersGroup& Context::GetPlayers() const
 Card::Suit Context::GetTrumpSuit() const
 {
 	return _trumpSuit;
+}
+
+UI& Context::GetUI() const
+{
+	return _ui;
 }

@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
+#include <optional>
 #include <SFML/Graphics.hpp>
-#include "IObserver.h"
 
 namespace sf
 {
@@ -11,7 +11,14 @@ namespace sf
 	class Event;
 }
 
-class UI : public IObserver
+class Round;
+class Player;
+class Deck;
+class Context;
+class Card;
+class User;
+
+class UI
 {
 public:
 	UI(const std::string&, unsigned int width, unsigned int height);
@@ -22,16 +29,18 @@ public:
 	void Update(double msDelta);
 	bool HandleEvent(const sf::Event&);
 
-	void OnRoundStart(const Round&) override;
-	void OnPlayerAttack(const Player& attacker, const Card& attackCard) override;
-	void OnPlayerDefend(const Player& defender, const Card& attackCard, const Card& defendCard) override;
-	void OnRoundEnd(const Round&) override;
-	void OnPlayerDrawCards(const Player&, const Deck&) override;
-	void OnPlayerDrawCards(const Player&, const Round&) override;
+	void OnRoundStart(const Round&);
+	void OnPlayerAttack(const Player& attacker, const Card& attackCard);
+	void OnPlayerDefend(const Player& defender, const Card& attackCard, const Card& defendCard);
+	void OnRoundEnd(const Round&);
+	void OnPlayerDrawCards(const Player&, const Deck&);
+	void OnPlayerDrawCards(const Player&, const Round&);
 
-	void OnStartGame(const Player& first, const Context&) override;
-	void OnUserWin(const Player& user, const Context&) override;
-	void OnUserLose(const Player& opponent, const Context&) override;
+	void OnStartGame(const Player& first, const Context&);
+	void OnUserWin(const Player& user, const Context&);
+	void OnUserLose(const Player& opponent, const Context&);
+
+	std::optional<Card> UserPickCard(const User&);
 
 private:
 	struct Data;

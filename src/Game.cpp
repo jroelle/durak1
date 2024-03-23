@@ -41,13 +41,12 @@ namespace
 		}
 	}
 
-	inline void logicLoop(std::shared_ptr<Context> context, std::shared_ptr<UI> ui)
+	inline void logicLoop(std::shared_ptr<Context> context)
 	{
 		Player* firstPlayer = findFirstPlayer(context->GetPlayers(), context->GetTrumpSuit());
-		ui->OnStartGame(*firstPlayer, *context);
+		context->GetUI().OnStartGame(*firstPlayer, *context);
 
 		auto round = std::make_unique<Round>(context, firstPlayer);
-		round->AddObserver(ui);
 
 		while (round)
 		{
@@ -56,20 +55,17 @@ namespace
 	}
 }
 
-Game::Game()
-	: _context(std::make_shared<Context>(2))
-{
-}
-
 void Game::Run()
 {
 	auto ui = std::make_shared<UI>("durak", 500, 500);
+	auto context = std::make_shared<Context>(*ui, 2);
+
 	ui->GetWindow().setActive(false);
 
 	std::thread render(&UILoop, ui);
 	render.detach();
 
-	std::thread logic(&logicLoop, _context, ui);
+	std::thread logic(&logicLoop, context);
 	logic.detach();
 
 	while (ui->GetWindow().isOpen())
