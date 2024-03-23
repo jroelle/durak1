@@ -3,17 +3,23 @@
 #include "Bot.h"
 #include "Deck.h"
 
+namespace
+{
+	inline bool equal(const Player* a, const Player* b)
+	{
+		using element = utility::loop_list<Player>::element;
+
+		element::hash hash;
+		element::equal equal;
+		return hash(a) == hash(b) && equal(a, b);
+	}
+}
+
 PlayersGroup::PlayersGroup(size_t botsNumber)
 {
-	using loop = utility::loop_list<Player>;
-
-	_user = _playerLoop.push(loop::make_holder<User>());
-
-
-	_playerLoop.reserve(botsNumber + 1);
-	_playerLoop.push_back(std::make_unique<User>());
+	_user = _playerLoop.push(PlayerLoop::element::make_holder<User>());
 	for (size_t i = 0; i < botsNumber; ++i)
-		_playerLoop.push_back(std::make_unique<Bot>());
+		_playerLoop.push(PlayerLoop::element::make_holder<User>());
 }
 
 PlayersGroup::~PlayersGroup()
@@ -22,29 +28,19 @@ PlayersGroup::~PlayersGroup()
 
 void PlayersGroup::DrawCards(Deck& deck, Player* start)
 {
-	ForEach([&deck](Player& player)
+	ForEach([&deck](Player* player)
 		{
-			player.DrawCards(deck);
+			player->DrawCards(deck);
 			return deck.IsEmpty();
 		}, start);
 }
 
-PlayersGroup::Index PlayersGroup::Next(Index i) const
+Player* PlayersGroup::Next(const Player* player) const
 {
-	return (i + 1) % _playerLoop.size();
+	return player ? _playerLoop.next(const_cast<Player*>(player)) : nullptr;
 }
 
-Player& PlayersGroup::Get(Index i)
-{
-	return const_cast<Player&>(const_cast<const PlayersGroup*>(this)->Get(i));
-}
-
-const Player& PlayersGroup::Get(Index i) const
-{
-	return *_playerLoop.at(i);
-}
-
-User* PlayersGroup::GetUser() const
+Player* PlayersGroup::GetUser() const
 {
 	return _user;
 }
@@ -54,32 +50,54 @@ size_t PlayersGroup::GetCount() const
 	return _playerLoop.size();
 }
 
-PlayersGroup::Index PlayersGroup::GetUserIndex() const
+Player* PlayersGroup::GetDefender(const Player* attacker) const
 {
-	return 0;
+	return Next(attacker);
 }
 
 void PlayersGroup::RemoveIf(const RemoveIfCallback& removeIf)
 {
-	_playerLoop.erase(std::remove_if(_playerLoop.begin(), _playerLoop.end(), removeIf));
+	std::vector<Player*> playersToRemove;
+	playersToRemove.reserve(GetCount());
+
+	_playerLoop.for_each([&removeIf, &playersToRemove](Player* player)
+		{
+			if (removeIf(player))
+				playersToRemove.push_back(player);
+		});
+
+	for (auto* player : playersToRemove)
+		_playerLoop.erase(player);
 }
 
-bool PlayersGroup::ForEach(const ForEachCallback& callback, Index start)
+bool PlayersGroup::ForEach(const ForEachCallback& callback, const Player* start) const
 {
-	for (size_t i = start; i < GetCount(); ++i)
-	{
-		if (callback(Get(i)))
-			return true;
-	}
-	return false;
+	return _playerLoop.for_each(const_cast<Player*>(start), callback);
 }
 
-bool PlayersGroup::ForEach(const ConstForEachCallback& callback, Index start) const
+bool PlayersGroup::ForEachIdlePlayer(const ForEachCallback& callback, const Player* attacker) const
 {
-	for (size_t i = start; i < GetCount(); ++i)
-	{
-		if (callback(Get(i)))
-			return true;
-	}
-	return false;
+	bool result = false;
+	_playerLoop.for_each(GetDefender(attacker), [&](Player* player)
+		{
+			result = callback(player);
+			return result || equal(attacker, player);
+		});
+	return result;
+}
+
+bool PlayersGroup::ForEachAttackerPlayer(const ForEachCallback& callback, const Player* attacker)
+{
+	return ForEachOtherPlayer(callback, GetDefender(attacker), attacker);
+}
+
+bool PlayersGroup::ForEachOtherPlayer(const ForEachCallback& callback, const Player* exclude, const Player* start) const
+{
+	return _playerLoop.for_each(const_cast<Player*>(start), [&](Player* player)
+		{
+			if (equal(exclude, player))
+				return false;
+
+			return callback(player);
+		});
 }

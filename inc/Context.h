@@ -20,16 +20,14 @@ public:
 	PlayersGroup& GetPlayers();
 	const PlayersGroup& GetPlayers() const;
 
-	PlayersGroup::Index GetAttackerIndex() const;
-	Player& GetAttacker();
-	const Player& GetAttacker() const;
+	Player* GetAttacker();
+	const Player* GetAttacker() const;
 
-	PlayersGroup::Index GetDefenderIndex() const;
-	Player& GetDefender();
-	const Player& GetDefender() const;
+	Player* GetDefender();
+	const Player* GetDefender() const;
 
 	Card::Suit GetTrumpSuit() const;
-	void ToNextAttacker();
+	void ToNextPlayer();
 
 	RoundCards& GetRoundCards();
 	const RoundCards& GetRoundCards() const;
@@ -37,7 +35,7 @@ public:
 private:
 	Deck _deck;
 	PlayersGroup _players;
-	PlayersGroup::Index _attackerIndex;
+	Player* _attacker = nullptr;
 	Card::Suit _trumpSuit;
 	RoundCards _roundCards;
 };

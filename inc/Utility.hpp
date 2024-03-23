@@ -44,15 +44,15 @@ namespace utility
 	public:
 		struct hash
 		{
-			size_t operator()(holder::pointer p) const { return reinterpret_cast<size_t>(p); }
+			size_t operator()(T* p) const { return reinterpret_cast<size_t>(p); }
 			size_t operator()(const holder& h) const { return operator()(h.get()); }
 		};
 		struct equal
 		{
-			bool operator()(holder::pointer a, holder::pointer b) const { return a == b; }
+			bool operator()(T* a, T* b) const { return a == b; }
 			bool operator()(const holder& a, const holder& b) const { return operator()(a.get(), b.get()); }
-			bool operator()(holder::pointer a, const holder& b) const { return operator()(a, b.get()); }
-			bool operator()(const holder& a, holder::pointer b) const { return operator()(a.get(), b); }
+			bool operator()(T* a, const holder& b) const { return operator()(a, b.get()); }
+			bool operator()(const holder& a, T* b) const { return operator()(a.get(), b); }
 		};
 
 	private:
@@ -67,7 +67,7 @@ namespace utility
 	{
 	public:
 		using value = T;
-		using element = list_element<T>;
+		using element = list_element<value>;
 		using storage = std::unordered_set<element, element::hash, element::equal>;
 
 		size_t size() const noexcept
@@ -84,26 +84,6 @@ namespace utility
 		value* push(element::holder&& h)
 		{
 			return push(element(std::move(h)));
-		}
-
-		value* push(element&& elem)
-		{
-			if (!elem.value())
-				return nullptr;
-
-			element* elem = _storage.insert(std::move(h)).first->get();
-			if (_root)
-			{
-				auto* last = previous(_root);
-				elem->_next = _root;
-				last->_next = elem;
-			}
-			else
-			{
-				_root = elem;
-				elem->_next = _root;
-			}
-			return elem->value();
 		}
 
 		void erase(value* elem)
@@ -129,11 +109,10 @@ namespace utility
 			if (!start || !_root)
 				return false;
 
-			auto iter = _storage.find(start);
-			if (iter == _storage.end())
+			element* elem = find(start);
+			if (!elem)
 				return false;
 
-			element* elem = &*iter;
 			do
 			{
 				if (callback(elem->value()))
@@ -151,6 +130,55 @@ namespace utility
 			return for_each(_root, callback);
 		}
 
+		value* next(value* v) const
+		{
+			auto* elem = find(v);
+			return elem ? elem->next() : nullptr;
+		}
+
+		value* previous(value* v) const
+		{
+			auto* elem = find(v);
+			return elem ? previous(elem) : nullptr;
+		}
+
+		value* root() const
+		{
+			return _root ? _root->value() : nullptr;
+		}
+
+	private:
+		value* push(element&& elem)
+		{
+			if (!elem.value())
+				return nullptr;
+
+			element* elem = _storage.insert(std::move(h)).first->get();
+			if (_root)
+			{
+				auto* last = previous(_root);
+				elem->_next = _root;
+				last->_next = elem;
+			}
+			else
+			{
+				_root = elem;
+				elem->_next = _root;
+			}
+			return elem->value();
+		}
+
+		element* find(value* v) const
+		{
+			auto iter = _storage.find(v);
+			return iter ? &*iter : nullptr;
+		}
+
+		element* next(element* elem) const
+		{
+			return elem ? elem->next() : nullptr;
+		}
+
 		element* previous(element* elem) const
 		{
 			if (!_root || !elem)
@@ -161,11 +189,6 @@ namespace utility
 				prev = prev->next();
 
 			return prev;
-		}
-
-		element* root() const
-		{
-			return _root;
 		}
 
 	private:

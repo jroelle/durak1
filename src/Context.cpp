@@ -4,19 +4,20 @@
 
 namespace
 {
-	inline PlayersGroup::Index findFirstPlayer(const PlayersGroup& players, Card::Suit trumpSuit)
+	inline Player* findFirstPlayer(const PlayersGroup& players, Card::Suit trumpSuit)
 	{
-		std::optional<std::pair<PlayersGroup::Index, Card>> firstPlayer;
-		for (PlayersGroup::Index i = 0; i < players.GetCount(); ++i)
-		{
-			const auto lowestCard = players.Get(i).FindLowestTrumpCard(trumpSuit);
-			if (lowestCard && (!firstPlayer || lowestCard->GetRank() < firstPlayer->second.GetRank()))
-				firstPlayer.emplace(i, *lowestCard);
+		std::optional<std::pair<Player*, Card>> firstPlayer;
 
-			if (firstPlayer && firstPlayer->second.GetRank() == Card::Rank::Min)
-				break;
-		}
-		return firstPlayer ? firstPlayer->first : 0;
+		players.ForEach([&firstPlayer, trumpSuit](const Player* player)
+			{
+				const auto lowestCard = player->FindLowestTrumpCard(trumpSuit);
+				if (lowestCard && (!firstPlayer || lowestCard->GetRank() < firstPlayer->second.GetRank()))
+					firstPlayer.emplace(&player, *lowestCard);
+
+				return firstPlayer && firstPlayer->second.GetRank() == Card::Rank::Min;
+			});
+
+		return firstPlayer ? firstPlayer->first : players.GetUser();
 	}
 }
 
@@ -25,7 +26,7 @@ Context::Context(size_t botsNumber)
 {
 	_trumpSuit = _deck.GetLast()->GetSuit();
 	_players.DrawCards(_deck);
-	_attackerIndex = findFirstPlayer(_players, _trumpSuit);
+	_attacker = findFirstPlayer(_players, _trumpSuit);
 }
 
 Deck& Context::GetDeck()
@@ -48,34 +49,24 @@ const PlayersGroup& Context::GetPlayers() const
 	return _players;
 }
 
-PlayersGroup::Index Context::GetAttackerIndex() const
+Player* Context::GetAttacker()
 {
-	return _attackerIndex;
+	return const_cast<Player*>(const_cast<const Context*>(this)->GetAttacker());
 }
 
-Player& Context::GetAttacker()
+const Player* Context::GetAttacker() const
 {
-	return const_cast<Player&>(const_cast<const Context*>(this)->GetAttacker());
+	return _attacker;
 }
 
-const Player& Context::GetAttacker() const
+Player* Context::GetDefender()
 {
-	return _players.Get(_attackerIndex);
+	return const_cast<Player*>(const_cast<const Context*>(this)->GetDefender());
 }
 
-PlayersGroup::Index Context::GetDefenderIndex() const
+const Player* Context::GetDefender() const
 {
-	return _players.Next(_attackerIndex, true);
-}
-
-Player& Context::GetDefender()
-{
-	return const_cast<Player&>(const_cast<const Context*>(this)->GetDefender());
-}
-
-const Player& Context::GetDefender() const
-{
-	return _players.Get(GetDefenderIndex());
+	return _players.Next(_attacker);
 }
 
 Card::Suit Context::GetTrumpSuit() const
@@ -83,9 +74,9 @@ Card::Suit Context::GetTrumpSuit() const
 	return _trumpSuit;
 }
 
-void Context::ToNextAttacker()
+void Context::ToNextPlayer()
 {
-	_attackerIndex = _players.Next(_attackerIndex, true);
+	_attacker = _players.GetDefender(_attacker);
 }
 
 Context::RoundCards& Context::GetRoundCards()

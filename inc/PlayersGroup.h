@@ -4,7 +4,6 @@
 
 class Deck;
 class Player;
-class User;
 
 class PlayersGroup
 {
@@ -13,20 +12,24 @@ public:
 	~PlayersGroup();
 	void DrawCards(Deck&, Player* start = nullptr);
 
-	Player* Next(Player*) const;
-	User* GetUser() const;
+	Player* Next(const Player*) const;
+	Player* GetUser() const;
 	size_t GetCount() const;
 
-	using RemoveIfCallback = std::function<bool(const Player&)>;
+	Player* GetDefender(const Player* attacker) const;
+
+	using RemoveIfCallback = std::function<bool(const Player*)>;
 	void RemoveIf(const RemoveIfCallback&);
 
 	using ForEachCallback = std::function<bool(Player*)>;
-	bool ForEach(const ForEachCallback&, Player* start = nullptr);
-
-	using ConstForEachCallback = std::function<bool(const Player*)>;
-	bool ForEach(const ConstForEachCallback&, Player* start = nullptr) const;
+	bool ForEach(const ForEachCallback&, const Player* start = nullptr) const;
+	bool ForEachIdlePlayer(const ForEachCallback&, const Player* attacker) const;
+	bool ForEachAttackerPlayer(const ForEachCallback&, const Player* attacker);
+	bool ForEachOtherPlayer(const ForEachCallback&, const Player* exclude, const Player* start = nullptr) const;
 
 private:
-	utility::loop_list<Player> _playerLoop;
-	User* _user = nullptr;
+	using PlayerLoop = utility::loop_list<Player>;
+
+	PlayerLoop _playerLoop;
+	Player* _user = nullptr;
 };
