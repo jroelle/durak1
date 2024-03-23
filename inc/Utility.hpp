@@ -49,14 +49,26 @@ namespace utility
 	{
 	public:
 		using element = list_element<T>;
-		using storage = std::unordered_set<holder>;
+		using holder = std::unique_ptr<element>;
 
-		loop_list() = default;
-
-		~loop_list()
+		struct hash
 		{
-			for (auto* elem : _storage)
-				delete elem;
+			size_t operator()(holder::pointer p) const { return reinterpret_cast<size_t>(p); }
+			size_t operator()(const holder& h) const { return operator()(h.get()); }
+		};
+		struct equal
+		{
+			bool operator()(holder::pointer a, holder::pointer b) const { return a == b;  }
+			bool operator()(const holder& a, const holder& b) const { return operator()(a.get(), b.get()); }
+			bool operator()(holder::pointer a, const holder& b) const { return operator()(a, b.get()); }
+			bool operator()(const holder& a, holder::pointer b) const { return operator()(a.get(), b); }
+		};
+		using storage = std::unordered_set<holder, hash, equal>;
+
+		template<typename... Args>
+		static holder make_holder(Args&&... args)
+		{
+			return std::make_unique<element>(std::forward<Args>(args)...);
 		}
 
 		size_t size() const noexcept
@@ -64,34 +76,28 @@ namespace utility
 			return _storage.size();
 		}
 
-		element* push(std::unique_ptr<element>&& ptr)
-		{
-			return push(ptr.release());
-		}
-
 		template<typename... Args>
 		element* emplace(Args&&... args)
 		{
-			return push(new element(std::forward<Args>(args)...));
+			return push(make_holder(std::forward<Args>(args)...));
 		}
 
-		template<typename B, typename E>
-		void assign(B begin, E end)
+		element* push(std::unique_ptr<element>&& ptr)
 		{
-			*this = {};
+			if (!ptr)
+				return nullptr;
 
-			if (begin == end)
-				return;
-
-			insert_to_storage(begin, end);
-			_root = *begin;
-			for (auto iter = begin; iter != end; ++iter)
+			element* elem = _storage.insert(std::move(ptr)).first->get();
+			if (_root)
 			{
-				auto n = std::next(iter);
-				if (n != end)
-					iter->_next = *n;
-				else
-					iter->_next = _root;
+				auto* last = previous(_root);
+				elem->_next = _root;
+				last->_next = elem;
+			}
+			else
+			{
+				_root = elem;
+				elem->_next = _root;
 			}
 		}
 
@@ -107,11 +113,13 @@ namespace utility
 			auto* n = elem->next();
 			p->_next = n;
 
-			erase_from_storage(elem);
+			auto iter = _storage.find(elem);
+			if (iter != _storage.end())
+				_storage.erase(iter); // _storage.erase(elem) in C++23
 		}
 
 		template<typename F>
-		bool for_each(element* start, const F& callback)
+		bool for_each(element* start, const F& callback) const
 		{
 			if (!start || !_root)
 				return false;
@@ -129,7 +137,7 @@ namespace utility
 		}
 
 		template<typename F>
-		bool for_each(const F& callback)
+		bool for_each(const F& callback) const
 		{
 			return for_each(_root, callback);
 		}
@@ -139,57 +147,16 @@ namespace utility
 			if (!_root || !elem)
 				return nullptr;
 
-			element* iter = _root;
-			while (iter->next() != elem)
-				iter = iter->next();
+			element* prev = _root;
+			while (prev->next() != elem)
+				prev = prev->next();
 
-			return iter;
+			return prev;
 		}
 
 		element* root() const
 		{
 			return _root;
-		}
-
-	private:
-		element* push(element* elem)
-		{
-			if (!elem)
-				return nullptr;
-
-			insert_to_storage(elem);
-			if (_root)
-			{
-				auto* last = previous(_root);
-				elem->_next = _root;
-				last->_next = elem;
-			}
-			else
-			{
-				_root = elem;
-				elem->_next = _root;
-			}
-		}
-
-		void insert_to_storage(element* elem)
-		{
-			_storage.insert(elem);
-		}
-
-		void erase_from_storage(element* elem)
-		{
-			auto iter = _storage.find(elem);
-			if (iter != _storage.end())
-			{
-				delete (*iter);
-				_storage.erase(iter);
-			}
-		}
-
-		template<typename B, typename E>
-		void insert_to_storage(B begin, E end)
-		{
-			_storage.insert(begin, end);
 		}
 
 	private:
