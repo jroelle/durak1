@@ -7,7 +7,6 @@ class Game
 {
 public:
 	Game();
-	std::shared_ptr<Context> GetContext() const;
 	void Run();
 
 private:

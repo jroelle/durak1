@@ -9,88 +9,121 @@ namespace
 	{
 		return player->HasAnyCards();
 	}
-
-	inline void drawCards(Context& context)
-	{
-		auto* attacker = context.GetAttacker();
-		auto* defender = context.GetDefender();
-		if (!attacker || !defender)
-			return;
-
-		context.GetPlayers().ForEachAttackPlayer([&context](Player* player)
-			{
-				player->DrawCards(context.GetDeck());
-				return false;
-			}, attacker);
-
-		defender->DrawCards(context.GetDeck());
-	}
 }
 
-Round::Round(std::shared_ptr<Context> context)
-	: Observed()
-	, _context(context)
+Round::Round(std::shared_ptr<Context> context, Player* attacker)
+	: _context(context)
+	, _attacker(attacker)
 {
 }
 
 std::unique_ptr<Round> Round::Run()
 {
 	auto& players = _context->GetPlayers();
-	auto& roundCards = _context->GetRoundCards();
 
-	auto* attacker = _context->GetAttacker();
-	auto* defender = _context->GetDefender();
+	auto* attacker = _attacker;
+	auto* defender = players.GetDefender(attacker);
 	if (!attacker || !defender)
 		return nullptr;
 
-	roundCards.clear();
+	HandleEvent([&](IObserver& observer)
+		{
+			observer.OnRoundStart(*this);
+		});
+
+	_cards = {};
+	_cards.reserve(Hand::MinCount * 2);
 	for (size_t attackIndex = 0; attackIndex < Hand::MinCount; ++attackIndex)
 	{
 		std::optional<Card> attackCard;
-		players.ForEachAttackPlayer([this, &attackCard](Player* attackPlayer)
+		Player* attackerPickedCard = nullptr;
+		players.ForEachAttackPlayer([this, &attackCard, &attackerPickedCard](Player* attackPlayer)
 			{
 				attackCard = attackPlayer->Attack(*_context);
+				attackerPickedCard = attackPlayer;
 				return attackCard.has_value();
 			}, attacker);
 
 		if (attackCard)
 		{
-			roundCards.emplace_back(*attackCard);
+			_cards.emplace_back(*attackCard);
+			HandleEvent([&](IObserver& observer)
+				{
+					observer.OnPlayerAttack(*attackerPickedCard, *attackCard);
+				});
+
 			if (const auto defendCard = defender->Defend(*_context, *attackCard))
 			{
-				roundCards.emplace_back(*defendCard);
+				_cards.emplace_back(*defendCard);
+				HandleEvent([&](IObserver& observer)
+					{
+						observer.OnPlayerDefend(*attackerPickedCard, *attackCard, *defendCard);
+					});
 			}
 			else
 			{
-				defender->AddCards(std::make_move_iterator(roundCards.begin()), std::make_move_iterator(roundCards.end()));
+				defender->AddCards(_cards.begin(), _cards.end());
+				HandleEvent([&](IObserver& observer)
+					{
+						observer.OnPlayerDrawCards(*defender, *this);
+					});
 				break;
 			}
 		}
 		break;
 	}
 
-	HandleEvent([this](IObserver& observer)
+	HandleEvent([&](IObserver& observer)
 		{
-			observer.OnRoundUpdate(*this);
+			observer.OnRoundEnd(*this);
 		});
 
-	roundCards.clear();
-	drawCards(*_context);
+	const auto drawCards = [&](Player* player)
+		{
+			player->DrawCards(_context->GetDeck());
+			if (!_context->GetDeck().IsEmpty())
+			{
+				HandleEvent([&](IObserver& observer)
+					{
+						observer.OnPlayerDrawCards(*player, _context->GetDeck());
+					});
+			}
+			return _context->GetDeck().IsEmpty();
+		};
+
+	players.ForEachAttackPlayer(drawCards, attacker);
+	drawCards(defender);
 
 	const auto* user = players.GetUser();
 	if (!user->HasAnyCards())
+	{
+		HandleEvent([&](IObserver& observer)
+			{
+				observer.OnUserWin(*players.GetUser(), *_context);
+			});
 		return nullptr;
+	}
 
 	if (_context->GetDeck().IsEmpty() && !players.ForEachOtherPlayer(playerHasAnyCards, user))
+	{
+		HandleEvent([&](IObserver& observer)
+			{
+				observer.OnUserLose(*players.GetUser(), *_context);
+			});
 		return nullptr;
+	}
 
 	players.RemoveIf(playerHasAnyCards);
-	_context->ToNextPlayer();
-	return std::make_unique<Round>(_context);
+	return std::make_unique<Round>(_context, defender);
 }
 
 
 std::shared_ptr<Context> Round::GetContext() const
 {
 	return _context;
+}
+
+const Round::Cards& Round::GetCards() const
+{
+	return _cards;
 }

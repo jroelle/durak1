@@ -20,22 +20,10 @@ public:
 	PlayersGroup& GetPlayers();
 	const PlayersGroup& GetPlayers() const;
 
-	Player* GetAttacker();
-	const Player* GetAttacker() const;
-
-	Player* GetDefender();
-	const Player* GetDefender() const;
-
 	Card::Suit GetTrumpSuit() const;
-	void ToNextPlayer();
-
-	RoundCards& GetRoundCards();
-	const RoundCards& GetRoundCards() const;
 
 private:
 	Deck _deck;
 	PlayersGroup _players;
-	Player* _attacker = nullptr;
 	Card::Suit _trumpSuit;
-	RoundCards _roundCards;
 };

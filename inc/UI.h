@@ -8,6 +8,7 @@ namespace sf
 	class RenderWindow;
 	class RenderTarget;
 	class Drawable;
+	class Event;
 }
 
 class UI : public IObserver
@@ -19,11 +20,18 @@ public:
 	sf::RenderWindow& GetWindow();
 	const sf::RenderWindow& GetWindow() const;
 	void Update();
+	bool HandleEvent(const sf::Event&);
 
-	void OnRoundUpdate(const Round&) override;
-	void OnStartGame(const PlayersGroup&) override;
-	void OnUserWin(const Player& user, const PlayersGroup&) override;
-	void OnUserLose(const Player& opponent) override;
+	void OnRoundStart(const Round&) override;
+	void OnPlayerAttack(const Player& attacker, const Card& attackCard) override;
+	void OnPlayerDefend(const Player& defender, const Card& attackCard, const Card& defendCard) override;
+	void OnRoundEnd(const Round&) override;
+	void OnPlayerDrawCards(const Player&, const Deck&) override;
+	void OnPlayerDrawCards(const Player&, const Round&) override;
+
+	void OnStartGame(const Player& first, const Context&) override;
+	void OnUserWin(const Player& user, const Context&) override;
+	void OnUserLose(const Player& opponent, const Context&) override;
 
 private:
 	struct Data;

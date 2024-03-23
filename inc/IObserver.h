@@ -1,21 +1,30 @@
 #pragma once
-#include <list>
+#include <forward_list>
 #include <memory>
 #include <functional>
+#include <optional>
 
 class Round;
-class PlayersGroup;
+class Context;
 class Player;
+class Deck;
+class Card;
 
 class IObserver
 {
 public:
 	virtual ~IObserver() = default;
 
-	virtual void OnRoundUpdate(const Round&) = 0;
-	virtual void OnStartGame(const PlayersGroup&) = 0;
-	virtual void OnUserWin(const Player& user, const PlayersGroup&) = 0;
-	virtual void OnUserLose(const Player& opponent) = 0;
+	virtual void OnRoundStart(const Round&) = 0;
+	virtual void OnPlayerAttack(const Player& attacker, const Card& attackCard) = 0;
+	virtual void OnPlayerDefend(const Player& defender, const Card& attackCard, const Card& defendCard) = 0;
+	virtual void OnRoundEnd(const Round&) = 0;
+	virtual void OnPlayerDrawCards(const Player&, const Deck&) = 0;
+	virtual void OnPlayerDrawCards(const Player&, const Round&) = 0;
+
+	virtual void OnStartGame(const Player& first, const Context&) = 0;
+	virtual void OnUserWin(const Player& user, const Context&) = 0;
+	virtual void OnUserLose(const Player& opponent, const Context&) = 0;
 };
 
 class Observed
@@ -42,5 +51,5 @@ public:
 	}
 
 private:
-	std::list<std::weak_ptr<IObserver>> _list;
+	std::forward_list<std::weak_ptr<IObserver>> _list;
 };

@@ -1,7 +1,10 @@
 #include "UI.h"
+#include <array>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Graphics/Text.hpp>
 #include "UIObject.h"
+#include "Hand.h"
+#include "Card.h"
 
 namespace
 {
@@ -38,8 +41,29 @@ namespace
 			sf::View view;
 			view.move(_position);
 			view.setRotation(_angleDeg);
+			_target.setView(view);
 
 			_target.draw(object);
+		}
+
+		void SetPosition(const sf::Vector2f& position)
+		{
+			_position = position;
+		}
+
+		const sf::Vector2f& GetPosition() const
+		{
+			return _position;
+		}
+
+		void SetAngleDeg(float angleDeg)
+		{
+			_angleDeg = angleDeg;
+		}
+
+		float GetAngleDeg() const
+		{
+			return _angleDeg;
 		}
 
 	private:
@@ -50,7 +74,8 @@ namespace
 
 struct UI::Data
 {
-	sf::Text textTemplate;
+	std::array<Card, Hand::MinCount * 2> roundCards;
+	// TODO
 };
 
 UI::UI(const std::string& title, unsigned int width, unsigned int height)
@@ -83,22 +108,52 @@ void UI::Update()
 	card2.Draw(painter);
 }
 
-void UI::OnRoundUpdate(const Round& round)
+bool UI::HandleEvent(const sf::Event& event)
+{
+	return false;
+}
+
+void UI::OnRoundStart(const Round& round)
 {
 
 }
 
-void UI::OnStartGame(const PlayersGroup& players)
+void UI::OnPlayerAttack(const Player& attacker, const Card& attackCard)
 {
 
 }
 
-void UI::OnUserWin(const Player& user, const PlayersGroup& players)
+void UI::OnPlayerDefend(const Player& defender, const Card& attackCard, const Card& defendCard)
 {
 
 }
 
-void UI::OnUserLose(const Player& opponent)
+void UI::OnRoundEnd(const Round& round)
+{
+
+}
+
+void UI::OnPlayerDrawCards(const Player& player, const Deck& deck)
+{
+
+}
+
+void UI::OnPlayerDrawCards(const Player& player, const Round& round)
+{
+
+}
+
+void UI::OnStartGame(const Player& first, const Context& context)
+{
+
+}
+
+void UI::OnUserWin(const Player& user, const Context& context)
+{
+
+}
+
+void UI::OnUserLose(const Player& opponent, const Context& context)
 {
 
 }

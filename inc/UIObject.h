@@ -22,9 +22,9 @@ public:
 	virtual ~UICard() = default;
 	void Draw(UIPainter&) const override final;
 
-	static constexpr double Width = 100.;
-	static constexpr double Height = 175.;
-	static constexpr double InnerOffset = 10.;
+	static constexpr double Width = 71.;
+	static constexpr double Height = 100.;
+	static constexpr double InnerOffset = 5.;
 
 protected:
 	virtual void draw(UIPainter&) const = 0;
