@@ -6,6 +6,8 @@
 namespace sf
 {
 	class RenderWindow;
+	class RenderTarget;
+	class Drawable;
 }
 
 class UI : public IObserver
@@ -24,8 +26,21 @@ public:
 	void OnUserLose(const Player& opponent) override;
 
 private:
-	class Objects;
+	struct Data;
 
 	sf::RenderWindow _window;
-	std::unique_ptr<Objects> _objects;
+	std::unique_ptr<Data> _data;
+};
+
+class UIPainter
+{
+public:
+	UIPainter(sf::RenderTarget& target)
+		: _target(target)
+	{}
+	virtual ~UIPainter() = default;
+	virtual void Draw(const sf::Drawable&) = 0;
+
+protected:
+	sf::RenderTarget& _target;
 };

@@ -1,11 +1,56 @@
 #include "UI.h"
 #include <SFML/Graphics/RenderWindow.hpp>
-#include <SFML/Graphics/RectangleShape.hpp>
+#include <SFML/Graphics/Text.hpp>
+#include "UIObject.h"
 
-class UI::Objects
+namespace
 {
-public:
+	class ViewRestorer
+	{
+	public:
+		ViewRestorer(sf::RenderTarget& target)
+			: _target(target)
+		{}
 
+		~ViewRestorer()
+		{
+			_target.setView(_target.getDefaultView());
+		}
+
+	private:
+		sf::RenderTarget& _target;
+	};
+
+	class TransformPainter : public UIPainter
+	{
+	public:
+		TransformPainter(sf::RenderTarget& target, const sf::Vector2f& position, float angleDeg)
+			: UIPainter(target)
+			, _position(position)
+			, _angleDeg(angleDeg)
+		{}
+		virtual ~TransformPainter() = default;
+
+		void Draw(const sf::Drawable& object) override
+		{
+			ViewRestorer restorer(_target);
+
+			sf::View view;
+			view.move(_position);
+			view.setRotation(_angleDeg);
+
+			_target.draw(object);
+		}
+
+	private:
+		sf::Vector2f _position;
+		float _angleDeg;
+	};
+}
+
+struct UI::Data
+{
+	sf::Text textTemplate;
 };
 
 UI::UI(const std::string& title, unsigned int width, unsigned int height)
@@ -29,10 +74,13 @@ const sf::RenderWindow& UI::GetWindow() const
 
 void UI::Update()
 {
-	sf::RectangleShape rect({ 50., 75. });
-	rect.setFillColor(sf::Color::Blue);
-	rect.setPosition(100., 200.);
-	_window.draw(rect);
+	TransformPainter painter(_window, { 200., 200. }, 30.);
+	
+	UIOpenedCard card1(Card{ Card::Suit::Diamonds, Card::Rank::Ace });
+	UIClosedCard card2;
+
+	card1.Draw(painter);
+	card2.Draw(painter);
 }
 
 void UI::OnRoundUpdate(const Round& round)

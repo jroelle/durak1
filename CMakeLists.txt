@@ -28,6 +28,8 @@ add_executable(durak1 main.cpp
 					"src/Round.cpp"
 					"inc/UI.h"
 					"src/UI.cpp"
+					"inc/UIObject.h"
+					"src/UIObject.cpp"
 					"inc/User.h"
 					"src/User.cpp"
 					"inc/Utility.hpp"

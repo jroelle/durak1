@@ -28,9 +28,13 @@ public:
 	};
 
 	Card() = delete;
+	Card(const Card&) = default;
+	Card(Card&&) = default;
 	Card(Suit, Rank);
 
 	bool operator==(const Card&) const = default;
+	Card& operator=(const Card&) = default;
+	Card& operator=(Card&&) = default;
 
 	Suit GetSuit() const;
 	Rank GetRank() const;
