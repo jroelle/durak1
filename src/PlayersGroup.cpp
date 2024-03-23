@@ -8,9 +8,7 @@ namespace
 	inline bool equal(const Player* a, const Player* b)
 	{
 		using element = utility::loop_list<Player>::element;
-
-		return element::hash{}(const_cast<Player*>(a)) == element::hash{}(const_cast<Player*>(b))
-			&& element::equal{}(const_cast<Player*>(a), const_cast<Player*>(b));
+		return element::hash{}(const_cast<Player*>(a)) == element::hash{}(const_cast<Player*>(b));
 	}
 }
 
@@ -63,6 +61,7 @@ void PlayersGroup::RemoveIf(const RemoveIfCallback& removeIf)
 		{
 			if (removeIf(player))
 				playersToRemove.push_back(player);
+			return false;
 		});
 
 	for (auto* player : playersToRemove)

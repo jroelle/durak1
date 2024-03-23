@@ -8,11 +8,11 @@ namespace
 	{
 		std::optional<std::pair<Player*, Card>> firstPlayer;
 
-		players.ForEach([&firstPlayer, trumpSuit](const Player* player)
+		players.ForEach([&firstPlayer, trumpSuit](Player* player)
 			{
-				const auto lowestCard = player->FindLowestTrumpCard(trumpSuit);
-				if (lowestCard && (!firstPlayer || lowestCard->GetRank() < firstPlayer->second.GetRank()))
-					firstPlayer.emplace(&player, *lowestCard);
+				const auto card = player->FindLowestTrumpCard(trumpSuit);
+				if (card && (!firstPlayer || card->GetRank() < firstPlayer->second.GetRank()))
+					firstPlayer.emplace(player, *card);
 
 				return firstPlayer && firstPlayer->second.GetRank() == Card::Rank::Min;
 			});

@@ -44,31 +44,34 @@ namespace utility
 	public:
 		struct hash
 		{
-			size_t operator()(T* p) const { return reinterpret_cast<size_t>(p); }
-			size_t operator()(const holder& h) const { return operator()(h.get()); }
+			using is_transparent = void;
+
+			size_t operator()(T* p) const { return std::hash<T*>{}(p); }
+			size_t operator()(const list_element& e) const { return operator()(const_cast<T*>(e.value())); }
 		};
 		struct equal
 		{
-			bool operator()(T* a, T* b) const { return a == b; }
-			bool operator()(const holder& a, const holder& b) const { return operator()(a.get(), b.get()); }
-			bool operator()(T* a, const holder& b) const { return operator()(a, b.get()); }
-			bool operator()(const holder& a, T* b) const { return operator()(a.get(), b); }
+			using is_transparent = void;
+
+			bool operator()(T* a, T* b) const { return std::equal_to<T*>{}(a, b); }
+			bool operator()(const list_element& a, const list_element& b) const { return operator()(const_cast<T*>(a.value()), const_cast<T*>(b.value())); }
+			bool operator()(T* a, const list_element& b) const { return operator()(a, const_cast<T*>(b.value())); }
+			bool operator()(const list_element& a, T* b) const { return operator()(const_cast<T*>(a.value()), b); }
 		};
 
 	private:
 		holder _holder;
 		list_element* _next = nullptr;
 
-		friend class loop_list;
+		template<typename T> friend class loop_list;
 	};
 
 	template<typename T>
 	class loop_list final
 	{
 	public:
-		using value = T;
-		using element = list_element<value>;
-		using storage = std::unordered_set<element, element::hash, element::equal>;
+		using element = list_element<T>;
+		using storage = std::unordered_set<element, typename element::hash, typename element::equal>;
 
 		size_t size() const noexcept
 		{
@@ -76,52 +79,33 @@ namespace utility
 		}
 
 		template<typename... Args>
-		value* emplace(Args&&... args)
+		T* emplace(Args&&... args)
 		{
 			return push(element(std::forward<Args>(args)...));
 		}
 
-		value* push(element::holder&& h)
+		T* push(element::holder&& h)
 		{
 			return push(element(std::move(h)));
 		}
 
-		void erase(value* elem)
+		void erase(T* v)
 		{
+			element* elem = find(v);
 			if (!elem)
 				return;
 			
 			if (elem == _root)
 				_root = elem->next();
 
-			auto* p = previous(elem);
-			auto* n = elem->next();
-			p->_next = n;
-
-			auto iter = _storage.find(elem);
-			if (iter != _storage.end())
-				_storage.erase(iter); // _storage.erase(elem) in C++23
+			previous(elem)->_next = elem->next();
+			_storage.erase(*elem); // _storage.erase(v) in C++23
 		}
 
 		template<typename F>
-		bool for_each(value* start, const F& callback) const
+		bool for_each(T* start, const F& callback) const
 		{
-			if (!start || !_root)
-				return false;
-
-			element* elem = find(start);
-			if (!elem)
-				return false;
-
-			do
-			{
-				if (callback(elem->value()))
-					return true;
-				elem = elem->next();
-
-			} while (elem != start);
-
-			return false;
+			return for_each(find(start), callback);
 		}
 
 		template<typename F>
@@ -130,30 +114,31 @@ namespace utility
 			return for_each(_root, callback);
 		}
 
-		value* next(value* v) const
+		T* next(T* v) const
 		{
-			auto* elem = find(v);
-			return elem ? elem->next() : nullptr;
+			element* elem = find(v);
+			return elem ? elem->next()->value() : nullptr;
 		}
 
-		value* previous(value* v) const
+		T* previous(T* v) const
 		{
-			auto* elem = find(v);
-			return elem ? previous(elem) : nullptr;
+			element* elem = previous(find(v));
+			return elem ? elem->value() : nullptr;
 		}
 
-		value* root() const
+		T* root() const
 		{
 			return _root ? _root->value() : nullptr;
 		}
 
 	private:
-		value* push(element&& elem)
+		T* push(element&& tmp)
 		{
-			if (!elem.value())
+			if (!tmp.value())
 				return nullptr;
 
-			element* elem = _storage.insert(std::move(h)).first->get();
+			auto iter = _storage.insert(std::move(tmp)).first;
+			element* elem = const_cast<element*>(&*iter);
 			if (_root)
 			{
 				auto* last = previous(_root);
@@ -168,10 +153,10 @@ namespace utility
 			return elem->value();
 		}
 
-		element* find(value* v) const
+		element* find(T* v) const
 		{
-			auto iter = _storage.find(v);
-			return iter ? &*iter : nullptr;
+			const auto iter = v ? _storage.find(v) : _storage.end();
+			return iter != _storage.end() ? const_cast<element*>(&*iter) : nullptr;
 		}
 
 		element* next(element* elem) const
@@ -189,6 +174,24 @@ namespace utility
 				prev = prev->next();
 
 			return prev;
+		}
+
+		template<typename F>
+		bool for_each(element* start, const F& callback) const
+		{
+			if (!start || !_root)
+				return false;
+
+			element* elem = start;
+			do
+			{
+				if (callback(elem->value()))
+					return true;
+				elem = elem->next();
+
+			} while (elem != start);
+
+			return false;
 		}
 
 	private:
