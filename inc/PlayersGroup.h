@@ -1,9 +1,9 @@
 #pragma once
 #include <functional>
+#include "Player.h"
 #include "Utility.hpp"
 
 class Deck;
-class Player;
 
 class PlayersGroup
 {
@@ -24,7 +24,7 @@ public:
 	using ForEachCallback = std::function<bool(Player*)>;
 	bool ForEach(const ForEachCallback&, const Player* start = nullptr) const;
 	bool ForEachIdlePlayer(const ForEachCallback&, const Player* attacker) const;
-	bool ForEachAttackerPlayer(const ForEachCallback&, const Player* attacker);
+	bool ForEachAttackPlayer(const ForEachCallback&, const Player* attacker);
 	bool ForEachOtherPlayer(const ForEachCallback&, const Player* exclude, const Player* start = nullptr) const;
 
 private:

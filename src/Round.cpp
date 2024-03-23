@@ -17,7 +17,7 @@ namespace
 		if (!attacker || !defender)
 			return;
 
-		context.GetPlayers().ForEachAttackerPlayer([&context](Player* player)
+		context.GetPlayers().ForEachAttackPlayer([&context](Player* player)
 			{
 				player->DrawCards(context.GetDeck());
 				return false;
@@ -47,7 +47,7 @@ std::unique_ptr<Round> Round::Run()
 	for (size_t attackIndex = 0; attackIndex < Hand::MinCount; ++attackIndex)
 	{
 		std::optional<Card> attackCard;
-		players.ForEachAttackerPlayer([this, &attackCard](Player* attackPlayer)
+		players.ForEachAttackPlayer([this, &attackCard](Player* attackPlayer)
 			{
 				attackCard = attackPlayer->Attack(*_context);
 				return attackCard.has_value();

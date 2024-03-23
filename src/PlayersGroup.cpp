@@ -1,7 +1,7 @@
 #include "PlayersGroup.h"
+#include "Deck.h"
 #include "User.h"
 #include "Bot.h"
-#include "Deck.h"
 
 namespace
 {
@@ -9,9 +9,8 @@ namespace
 	{
 		using element = utility::loop_list<Player>::element;
 
-		element::hash hash;
-		element::equal equal;
-		return hash(a) == hash(b) && equal(a, b);
+		return element::hash{}(const_cast<Player*>(a)) == element::hash{}(const_cast<Player*>(b))
+			&& element::equal{}(const_cast<Player*>(a), const_cast<Player*>(b));
 	}
 }
 
@@ -78,7 +77,7 @@ bool PlayersGroup::ForEach(const ForEachCallback& callback, const Player* start)
 bool PlayersGroup::ForEachIdlePlayer(const ForEachCallback& callback, const Player* attacker) const
 {
 	bool result = false;
-	_playerLoop.for_each(GetDefender(attacker), [&](Player* player)
+	_playerLoop.for_each(Next(GetDefender(attacker)), [&](Player* player)
 		{
 			result = callback(player);
 			return result || equal(attacker, player);
@@ -86,7 +85,7 @@ bool PlayersGroup::ForEachIdlePlayer(const ForEachCallback& callback, const Play
 	return result;
 }
 
-bool PlayersGroup::ForEachAttackerPlayer(const ForEachCallback& callback, const Player* attacker)
+bool PlayersGroup::ForEachAttackPlayer(const ForEachCallback& callback, const Player* attacker)
 {
 	return ForEachOtherPlayer(callback, GetDefender(attacker), attacker);
 }
