@@ -27,7 +27,6 @@ public:
 	bool ForEach(const ConstForEachCallback&, Player* start = nullptr) const;
 
 private:
-	using PlayerLoop = utility::loop_list<Player>;
-	PlayerLoop _playerLoop;
+	utility::loop_list<Player> _playerLoop;
 	User* _user = nullptr;
 };

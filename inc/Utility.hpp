@@ -6,30 +6,34 @@
 namespace utility
 {
 	template<typename T>
-	class list_element final : public T
+	class list_element final
 	{
 	public:
-		template<typename... Args>
-		list_element(Args&&... args)
-			: _value(std::forward<Args>(args)...)
-		{}
+		using holder = std::unique_ptr<T>;
 
-		constexpr list_element(const T& value)
-			: _value(value)
-		{}
-
-		constexpr list_element(T&& value)
-			: _value(std::move(value))
-		{}
-
-		constexpr T& value()
+		template<typename D, typename... Args>
+		static holder make_holder(Args&&... args)
 		{
-			return _value;
+			return std::make_unique<D>(std::forward<Args>(args)...);
 		}
 
-		constexpr const T& value() const
+		template<typename D, typename... Args>
+		list_element(Args&&... args)
+			: _holder(make_holder<D>(std::forward<Args>(args)...))
+		{}
+
+		constexpr list_element(holder&& h)
+			: _holder(std::move(h))
+		{}
+
+		constexpr T* value()
 		{
-			return _value;
+			return _holder.get();
+		}
+
+		constexpr const T* value() const
+		{
+			return _holder.get();
 		}
 
 		constexpr list_element* next() const
@@ -37,8 +41,22 @@ namespace utility
 			return _next;
 		}
 
+	public:
+		struct hash
+		{
+			size_t operator()(holder::pointer p) const { return reinterpret_cast<size_t>(p); }
+			size_t operator()(const holder& h) const { return operator()(h.get()); }
+		};
+		struct equal
+		{
+			bool operator()(holder::pointer a, holder::pointer b) const { return a == b; }
+			bool operator()(const holder& a, const holder& b) const { return operator()(a.get(), b.get()); }
+			bool operator()(holder::pointer a, const holder& b) const { return operator()(a, b.get()); }
+			bool operator()(const holder& a, holder::pointer b) const { return operator()(a.get(), b); }
+		};
+
 	private:
-		T _value;
+		holder _holder;
 		list_element* _next = nullptr;
 
 		friend class loop_list;
@@ -48,28 +66,9 @@ namespace utility
 	class loop_list final
 	{
 	public:
+		using value = T;
 		using element = list_element<T>;
-		using holder = std::unique_ptr<element>;
-
-		struct hash
-		{
-			size_t operator()(holder::pointer p) const { return reinterpret_cast<size_t>(p); }
-			size_t operator()(const holder& h) const { return operator()(h.get()); }
-		};
-		struct equal
-		{
-			bool operator()(holder::pointer a, holder::pointer b) const { return a == b;  }
-			bool operator()(const holder& a, const holder& b) const { return operator()(a.get(), b.get()); }
-			bool operator()(holder::pointer a, const holder& b) const { return operator()(a, b.get()); }
-			bool operator()(const holder& a, holder::pointer b) const { return operator()(a.get(), b); }
-		};
-		using storage = std::unordered_set<holder, hash, equal>;
-
-		template<typename... Args>
-		static holder make_holder(Args&&... args)
-		{
-			return std::make_unique<element>(std::forward<Args>(args)...);
-		}
+		using storage = std::unordered_set<element, element::hash, element::equal>;
 
 		size_t size() const noexcept
 		{
@@ -77,17 +76,22 @@ namespace utility
 		}
 
 		template<typename... Args>
-		element* emplace(Args&&... args)
+		value* emplace(Args&&... args)
 		{
-			return push(make_holder(std::forward<Args>(args)...));
+			return push(element(std::forward<Args>(args)...));
 		}
 
-		element* push(std::unique_ptr<element>&& ptr)
+		value* push(element::holder&& h)
 		{
-			if (!ptr)
+			return push(element(std::move(h)));
+		}
+
+		value* push(element&& elem)
+		{
+			if (!elem.value())
 				return nullptr;
 
-			element* elem = _storage.insert(std::move(ptr)).first->get();
+			element* elem = _storage.insert(std::move(h)).first->get();
 			if (_root)
 			{
 				auto* last = previous(_root);
@@ -99,12 +103,13 @@ namespace utility
 				_root = elem;
 				elem->_next = _root;
 			}
+			return elem->value();
 		}
 
-		element* erase(element* elem)
+		void erase(value* elem)
 		{
 			if (!elem)
-				return nullptr;
+				return;
 			
 			if (elem == _root)
 				_root = elem->next();
@@ -119,15 +124,19 @@ namespace utility
 		}
 
 		template<typename F>
-		bool for_each(element* start, const F& callback) const
+		bool for_each(value* start, const F& callback) const
 		{
 			if (!start || !_root)
 				return false;
 
-			element* elem = start;
+			auto iter = _storage.find(start);
+			if (iter == _storage.end())
+				return false;
+
+			element* elem = &*iter;
 			do
 			{
-				if (callback(elem))
+				if (callback(elem->value()))
 					return true;
 				elem = elem->next();
 

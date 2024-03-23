@@ -5,6 +5,11 @@
 
 PlayersGroup::PlayersGroup(size_t botsNumber)
 {
+	using loop = utility::loop_list<Player>;
+
+	_user = _playerLoop.push(loop::make_holder<User>());
+
+
 	_playerLoop.reserve(botsNumber + 1);
 	_playerLoop.push_back(std::make_unique<User>());
 	for (size_t i = 0; i < botsNumber; ++i)
@@ -37,6 +42,11 @@ Player& PlayersGroup::Get(Index i)
 const Player& PlayersGroup::Get(Index i) const
 {
 	return *_playerLoop.at(i);
+}
+
+User* PlayersGroup::GetUser() const
+{
+	return _user;
 }
 
 size_t PlayersGroup::GetCount() const
