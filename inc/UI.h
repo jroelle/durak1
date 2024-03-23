@@ -1,5 +1,6 @@
 #pragma once
 #include <memory>
+#include <SFML/Graphics.hpp>
 #include "IObserver.h"
 
 namespace sf
@@ -10,11 +11,11 @@ namespace sf
 class UI : public IObserver
 {
 public:
-	UI() = delete;
-	UI(sf::RenderWindow&);
+	UI(const std::string&, unsigned int width, unsigned int height);
 	~UI();
 
-	sf::RenderWindow& GetWindow() const;
+	sf::RenderWindow& GetWindow();
+	const sf::RenderWindow& GetWindow() const;
 	void Update();
 
 	void OnRoundUpdate(const Round&) override;
@@ -25,6 +26,6 @@ public:
 private:
 	class Objects;
 
-	sf::RenderWindow& _window;
+	sf::RenderWindow _window;
 	std::unique_ptr<Objects> _objects;
 };

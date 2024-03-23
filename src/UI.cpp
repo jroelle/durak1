@@ -8,8 +8,8 @@ public:
 
 };
 
-UI::UI(sf::RenderWindow& window)
-	: _window(window)
+UI::UI(const std::string& title, unsigned int width, unsigned int height)
+	: _window(sf::VideoMode{ width, height }, sf::String(title))
 {
 }
 
@@ -17,7 +17,12 @@ UI::~UI()
 {
 }
 
-sf::RenderWindow& UI::GetWindow() const
+sf::RenderWindow& UI::GetWindow()
+{
+	return const_cast<sf::RenderWindow&>(const_cast<const UI*>(this)->GetWindow());
+}
+
+const sf::RenderWindow& UI::GetWindow() const
 {
 	return _window;
 }

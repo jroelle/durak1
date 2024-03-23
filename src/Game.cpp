@@ -1,22 +1,40 @@
 #include "Game.h"
 #include <thread>
-#include <SFML/Graphics.hpp>
 #include "Context.h"
 #include "Round.h"
 #include "UI.h"
+#include "Utility.hpp"
 
 namespace
 {
-	void renderingThread(std::shared_ptr<UI> ui)
-	{
-		ui->GetWindow().setVerticalSyncEnabled(true);
-		ui->GetWindow().setActive(true);
+	using PtrUI = std::shared_ptr<UI>;
+	using AtomicUI = std::atomic<PtrUI>;
 
-		while (ui->GetWindow().isOpen())
+	template<typename T>
+	inline utility::atomic_accessor<T> access(std::atomic<std::shared_ptr<T>>& atomic)
+	{
+		return utility::atomic_accessor<T>(atomic);
+	}
+
+	void renderingThread(AtomicUI& ui)
+	{
+		if (auto accessor = access(ui))
 		{
-			ui->GetWindow().clear();
-			ui->Update();
-			ui->GetWindow().display();
+			accessor.get()->GetWindow().setVerticalSyncEnabled(true);
+			accessor.get()->GetWindow().setActive(true);
+		}
+
+		while (auto accessor = access(ui))
+		{
+			if (!accessor.get()->GetWindow().isOpen())
+			{
+				accessor.set_changed(false);
+				break;
+			}
+
+			accessor.get()->GetWindow().clear();
+			accessor.get()->Update();
+			accessor.get()->GetWindow().display();
 		}
 	}
 }
@@ -33,14 +51,21 @@ std::shared_ptr<Context> Game::GetContext() const
 
 void Game::Run()
 {
-	sf::RenderWindow window(sf::VideoMode{ 500, 500 }, "durak");
-	window.setActive(false);
+	auto ui = AtomicUI(std::make_shared<UI>("durak", 500, 500));
+	if (auto accessor = access(ui))
+		accessor.get()->GetWindow().setActive(false);
 
-	auto ui = std::make_shared<UI>(window);
 	std::thread render(&renderingThread, ui);
 
-	while (window.isOpen())
+	while (auto accessor = access(ui))
 	{
+		auto& window = accessor.get()->GetWindow();
+		if (!window.isOpen())
+		{
+			accessor.set_changed(false);
+			break;
+		}
+
 		for (auto event = sf::Event{}; window.pollEvent(event);)
 		{
 			if (event.type == sf::Event::Closed)
@@ -50,7 +75,7 @@ void Game::Run()
 		}
 
 		auto round = std::make_unique<Round>(GetContext());
-		round->AddObserver(ui);
+		round->AddObserver(accessor.get());
 		while (round)
 		{
 			round = round->Run();
