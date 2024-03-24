@@ -41,31 +41,53 @@ namespace
 	inline sf::VertexArray createBeveledRectangle(bool fill, const sf::Color& color, float width, float height, float bevel)
 	{
 		sf::VertexArray rect(fill ? sf::PrimitiveType::TriangleFan : sf::PrimitiveType::LineStrip, 9);
-		rect[0].position = { -0.5f * width, 0.5f * height - bevel }; // top left
-		rect[1].position = { -0.5f * width + bevel, 0.5f * height }; // top left
-		rect[2].position = { 0.5f * width - bevel, 0.5f * height }; // top right
-		rect[3].position = { 0.5f * width, 0.5f * height - bevel }; // top right
-		rect[4].position = { 0.5f * width, -0.5f * height + bevel }; // bottom right
-		rect[5].position = { 0.5f * width - bevel, -0.5f * height }; // bottom right
-		rect[6].position = { -0.5f * width + bevel, -0.5f * height }; // bottom left
-		rect[7].position = { -0.5f * width, -0.5f * height + bevel }; // bottom left
+		rect[0].position = { -0.5f * width, 0.5f * height - bevel };
+		rect[1].position = { -0.5f * width + bevel, 0.5f * height };
+		rect[2].position = { 0.5f * width - bevel, 0.5f * height };
+		rect[3].position = { 0.5f * width, 0.5f * height - bevel };
+		rect[4].position = { 0.5f * width, -0.5f * height + bevel };
+		rect[5].position = { 0.5f * width - bevel, -0.5f * height };
+		rect[6].position = { -0.5f * width + bevel, -0.5f * height };
+		rect[7].position = { -0.5f * width, -0.5f * height + bevel };
 		rect[8].position = rect[0].position;
 		setColor(rect, color);
 		return rect;
+	}
+
+	inline void drawBeveledRectangle(UIPainter& painter, const sf::Color& fillColor, const sf::Color& outlineColor, float width, float height, float bevel)
+	{
+		auto card = createBeveledRectangle(true, fillColor, width, height, bevel);
+		painter.Draw(card);
+
+		if (fillColor != outlineColor)
+		{
+			card.setPrimitiveType(sf::PrimitiveType::LineStrip);
+			setColor(card, outlineColor);
+			painter.Draw(card);
+		}
+	}
+
+	inline void drawPointPattern(UIPainter& painter, const sf::Color& color, float width, float height, float step)
+	{
+		sf::VertexArray points(sf::PrimitiveType::Points, 4);
+		setColor(points, color);
+
+		for (float x = 0.f; x < 0.5f * width; x += step)
+		{
+			for (float y = 0.f; y < 0.5f * height; y += step)
+			{
+				points[0].position = { x, y };
+				points[1].position = { -x, y };
+				points[2].position = { -x, -y };
+				points[3].position = { x, -y };
+				painter.Draw(points);
+			}
+		}
 	}
 }
 
 void UICard::Draw(UIPainter& painter) const
 {
-	constexpr double bevel = Width * 0.075f;
-
-	auto card = createBeveledRectangle(true, Color::LightGrayGreen, Width, Height, bevel);
-	painter.Draw(card);
-
-	card.setPrimitiveType(sf::PrimitiveType::LineStrip);
-	setColor(card, Color::DarkBrown);
-	painter.Draw(card);
-
 	draw(painter);
 }
 
@@ -83,12 +105,14 @@ UIOpenedCard::UIOpenedCard(const Card& card)
 
 void UIOpenedCard::draw(UIPainter& painter) const
 {
-	constexpr float offset = Width * 0.05f;
+	constexpr float textOffset = Width * 0.05f;
+
+	drawBeveledRectangle(painter, Color::LightGrayGreen, Color::DarkBrown, Width, Height, Bevel);
 
 	sf::Text text;
 	text.setFont(_font);
 	text.setCharacterSize(static_cast<unsigned int>(Width / 2.5));
-	text.setPosition(-0.5f * Width + offset, -0.5f * Height + offset);
+	text.setPosition(-0.5f * Width + textOffset, -0.5f * Height + textOffset);
 	text.setFillColor(Color::DarkBrown);
 
 	text.setString(getRank(_card.GetRank()));
@@ -101,11 +125,11 @@ void UIOpenedCard::draw(UIPainter& painter) const
 
 void UIClosedCard::draw(UIPainter& painter) const
 {
-	constexpr float offset = Width * 0.1f;
-	constexpr float bevel = Width * 0.05f;
+	constexpr float patternStepCoeff = 0.1f;
+	constexpr float patternSizeCoeff = 0.95f;
 
-	const auto face = createBeveledRectangle(true, Color::DarkBrown, Width - 2 * offset, Height - 2 * offset, bevel);
-	painter.Draw(face);
+	drawBeveledRectangle(painter, Color::DarkBrown, Color::LightGrayGreen, Width, Height, Bevel);
+	drawPointPattern(painter, Color::LightGrayGreen, Width * patternSizeCoeff, Height * patternSizeCoeff, Width * patternStepCoeff);
 }
 
 void UISkipButton::Draw(UIPainter& painter) const

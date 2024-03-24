@@ -28,7 +28,7 @@ public:
 
 	static constexpr float Width = 150.;
 	static constexpr float Height = 215.;
-	static constexpr float InnerOffset = 15.;
+	static constexpr float Bevel = Width * 0.075f;
 
 protected:
 	virtual void draw(UIPainter&) const = 0;
