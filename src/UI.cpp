@@ -76,7 +76,7 @@ namespace
 			// TODO
 		}
 
-		void Update(double msDelta)
+		void Update(UIPainter&, double msDelta)
 		{
 			// TODO
 		}
@@ -140,11 +140,15 @@ void UI::Update(double msDelta)
 	Mutex::Guard guard(Mutex::Get());
 	const auto size = _window.getView().getSize();
 
-	sf::RectangleShape bg(size);
-	bg.setFillColor(Color::DarkBrown);
-	_window.draw(bg);
+	{
+		sf::RectangleShape bg(size);
+		bg.setFillColor(Color::DarkBrown);
+		_window.draw(bg);
+	}
 
 	TransformPainter painter(_window);
+
+	_data->animation.Update(painter, msDelta);
 
 	if (_data->flags & Data::Flag::PickingCard)
 	{
@@ -153,13 +157,19 @@ void UI::Update(double msDelta)
 		button.Draw(painter);
 	}
 
-	_data->animation.Update(msDelta);
-
 	if (_data->flags & Data::Flag::DraggingCard)
 	{
-		UIOpenedCard card(Card{ Card::Suit::Diamonds, Card::Rank::Ace });
-		painter.SetPosition(_data->cursorPosition);
-		card.Draw(painter);
+		{
+			UIOpenedCard card({ Card::Suit::Diamonds, Card::Rank::Jack });
+			painter.SetPosition(_data->cursorPosition);
+			card.Draw(painter);
+		}
+
+		{
+			UIClosedCard card;
+			painter.SetPosition(_data->cursorPosition + sf::Vector2f{ 200.f, 0.f });
+			card.Draw(painter);
+		}
 	}
 
 	if (_data->animation.IsEmpty())

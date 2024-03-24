@@ -38,27 +38,33 @@ namespace
 		return {};
 	}
 
-	constexpr wchar_t getSuit(Card::Suit suit, bool fill)
+	inline sf::VertexArray createBeveledRectangle(bool fill, const sf::Color& color, float width, float height, float bevel)
 	{
-		switch (suit)
-		{
-		case Card::Suit::Hearts:	return fill ? '♥' : '♡';
-		case Card::Suit::Diamonds:	return fill ? '♦' : '♢';
-		case Card::Suit::Clover:	return fill ? '♣' : '♧';
-		case Card::Suit::Spades:	return fill ? '♠' : '♤';
-		}
-		return {};
+		sf::VertexArray rect(fill ? sf::PrimitiveType::TriangleFan : sf::PrimitiveType::LineStrip, 9);
+		rect[0].position = { -0.5f * width, 0.5f * height - bevel }; // top left
+		rect[1].position = { -0.5f * width + bevel, 0.5f * height }; // top left
+		rect[2].position = { 0.5f * width - bevel, 0.5f * height }; // top right
+		rect[3].position = { 0.5f * width, 0.5f * height - bevel }; // top right
+		rect[4].position = { 0.5f * width, -0.5f * height + bevel }; // bottom right
+		rect[5].position = { 0.5f * width - bevel, -0.5f * height }; // bottom right
+		rect[6].position = { -0.5f * width + bevel, -0.5f * height }; // bottom left
+		rect[7].position = { -0.5f * width, -0.5f * height + bevel }; // bottom left
+		rect[8].position = rect[0].position;
+		setColor(rect, color);
+		return rect;
 	}
 }
 
 void UICard::Draw(UIPainter& painter) const
 {
-	sf::RectangleShape rect({ Width, Height });
-	rect.setOrigin({ 0.5f * Width, 0.5f * Height });
-	rect.setOutlineColor(Color::DarkBrown);
-	rect.setFillColor(Color::LightGrayGreen);
-	rect.setOutlineThickness(5.);
-	painter.Draw(rect);
+	constexpr double bevel = Width * 0.075f;
+
+	auto card = createBeveledRectangle(true, Color::LightGrayGreen, Width, Height, bevel);
+	painter.Draw(card);
+
+	card.setPrimitiveType(sf::PrimitiveType::LineStrip);
+	setColor(card, Color::DarkBrown);
+	painter.Draw(card);
 
 	draw(painter);
 }
@@ -77,25 +83,29 @@ UIOpenedCard::UIOpenedCard(const Card& card)
 
 void UIOpenedCard::draw(UIPainter& painter) const
 {
+	constexpr float offset = Width * 0.05f;
+
 	sf::Text text;
-	text.move(-20.f, 20.f);
-	text.setCharacterSize(static_cast<unsigned int>(Width / 2.5));
 	text.setFont(_font);
+	text.setCharacterSize(static_cast<unsigned int>(Width / 2.5));
+	text.setPosition(-0.5f * Width + offset, -0.5f * Height + offset);
 	text.setFillColor(Color::DarkBrown);
 
 	text.setString(getRank(_card.GetRank()));
 	painter.Draw(text);
 
-	text.move(20.f, 0.f);
-	text.setString(getSuit(_card.GetSuit(), true));
+	text.setPosition(-text.getPosition());
+	text.rotate(180.f);
 	painter.Draw(text);
 }
 
 void UIClosedCard::draw(UIPainter& painter) const
 {
-	sf::RectangleShape rect({ Width, Height });
-	rect.setFillColor(Color::DarkBrown);
-	painter.Draw(rect);
+	constexpr float offset = Width * 0.1f;
+	constexpr float bevel = Width * 0.05f;
+
+	const auto face = createBeveledRectangle(true, Color::DarkBrown, Width - 2 * offset, Height - 2 * offset, bevel);
+	painter.Draw(face);
 }
 
 void UISkipButton::Draw(UIPainter& painter) const
@@ -112,18 +122,18 @@ void UISkipButton::Draw(UIPainter& painter) const
 	painter.Draw(rect);
 
 	sf::VertexArray square(sf::PrimitiveType::LineStrip, 5);
+	setColor(square, Color::LightGrayGreen);
 	square[0].position = { -0.5f * Size, 0.5f * Size };
 	square[1].position = { 0.5f * Size, 0.5f * Size };
 	square[2].position = { 0.5f * Size, -0.5f * Size };
 	square[3].position = { -0.5f * Size, -0.5f * Size };
 	square[4].position = square[0].position;
-	setColor(square, Color::LightGrayGreen);
 	painter.Draw(square);
 
 	sf::VertexArray cross(sf::PrimitiveType::Lines, 2);
+	setColor(cross, Color::LightGrayGreen);
 	cross[0].position = { -0.5f * IconSize, 0.5f * IconSize };
 	cross[1].position = { 0.5f * IconSize, -0.5f * IconSize };
-	setColor(cross, Color::LightGrayGreen);
 	painter.Draw(cross);
 
 	cross[0].position = { 0.5f * IconSize, 0.5f * IconSize };

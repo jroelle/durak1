@@ -26,9 +26,9 @@ public:
 	void Draw(UIPainter&) const override final;
 	sf::FloatRect GetBoundingRect() const override final;
 
-	static constexpr double Width = 150.;
-	static constexpr double Height = 215.;
-	static constexpr double InnerOffset = 15.;
+	static constexpr float Width = 150.;
+	static constexpr float Height = 215.;
+	static constexpr float InnerOffset = 15.;
 
 protected:
 	virtual void draw(UIPainter&) const = 0;
@@ -59,9 +59,9 @@ private:
 class UISkipButton final : public UIObject
 {
 public:
-	static constexpr double Size = 50.;
-	static constexpr double IconSize = 40.;
-	static constexpr double LineWidth = 5.;
+	static constexpr float Size = 50.;
+	static constexpr float IconSize = 40.;
+	static constexpr float LineWidth = 5.;
 
 	void Draw(UIPainter&) const override;
 	sf::FloatRect GetBoundingRect() const override;
