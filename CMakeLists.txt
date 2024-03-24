@@ -35,7 +35,7 @@ add_executable(durak1 main.cpp
 					"inc/User.h"
 					"src/User.cpp"
 					"inc/Utility.hpp"
-)
+ "out/build/debug/ds-kork3.ttf")
 
 target_link_libraries(durak1 PRIVATE sfml-graphics sfml-window sfml-system)
 

@@ -146,6 +146,13 @@ void UI::Update(double msDelta)
 
 	TransformPainter painter(_window);
 
+	if (_data->flags & Data::Flag::PickingCard)
+	{
+		UISkipButton button;
+		painter.SetPosition({ size.x, size.y * 1.5f });
+		button.Draw(painter);
+	}
+
 	_data->animation.Update(msDelta);
 
 	if (_data->flags & Data::Flag::DraggingCard)
@@ -153,13 +160,6 @@ void UI::Update(double msDelta)
 		UIOpenedCard card(Card{ Card::Suit::Diamonds, Card::Rank::Ace });
 		painter.SetPosition(_data->cursorPosition);
 		card.Draw(painter);
-	}
-
-	if (_data->flags & Data::Flag::PickingCard)
-	{
-		UISkipButton button;
-		painter.SetPosition({ size.x, size.y * 1.5f });
-		button.Draw(painter);
 	}
 
 	if (_data->animation.IsEmpty())
@@ -176,15 +176,18 @@ bool UI::HandleEvent(const sf::Event& event)
 		{
 			//_data->cursorPosition = toModel({ event.mouseMove.x, event.mouseMove.y });
 			_data->flags |= Data::Flag::DraggingCard;
+			_data->flags |= Data::Flag::NeedRedraw;
 		}
 		break;
 
 	case sf::Event::EventType::MouseButtonReleased:
 		_data->flags &= ~Data::Flag::DraggingCard;
+		_data->flags |= Data::Flag::NeedRedraw;
 		break;
 
 	case sf::Event::EventType::MouseMoved:
 		_data->cursorPosition = toModel({ event.mouseMove.x, event.mouseMove.y });
+		_data->flags |= Data::Flag::NeedRedraw;
 		break;
 	}
 

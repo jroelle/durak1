@@ -1,4 +1,4 @@
-#include "UIObject.h"
+﻿#include "UIObject.h"
 #include <cmath>
 #include <numbers>
 #include <SFML/Graphics/RectangleShape.hpp>
@@ -21,20 +21,37 @@ namespace
 		for (size_t i = 0; i < vertices.getVertexCount(); ++i)
 			vertices[i].color = color;
 	}
+
+	constexpr char getRank(Card::Rank rank)
+	{
+		switch (rank)
+		{
+		case Card::Rank::Number6:		return '6';
+		case Card::Rank::Number7:		return '7';
+		case Card::Rank::Number8:		return '8';
+		case Card::Rank::Number9:		return '9';
+		case Card::Rank::Jack:			return 'J';
+		case Card::Rank::Queen:			return 'Q';
+		case Card::Rank::King:			return 'K';
+		case Card::Rank::Ace:			return 'A';
+		}
+		return {};
+	}
+
+	constexpr wchar_t getSuit(Card::Suit suit, bool fill)
+	{
+		switch (suit)
+		{
+		case Card::Suit::Hearts:	return fill ? '♥' : '♡';
+		case Card::Suit::Diamonds:	return fill ? '♦' : '♢';
+		case Card::Suit::Clover:	return fill ? '♣' : '♧';
+		case Card::Suit::Spades:	return fill ? '♠' : '♤';
+		}
+		return {};
+	}
 }
 
 void UICard::Draw(UIPainter& painter) const
-{
-	drawOutline(painter);
-	draw(painter);
-}
-
-sf::FloatRect UICard::GetBoundingRect() const
-{
-	return { -0.5f * Width, 0.5f * Height, Width, Height };
-}
-
-void UICard::drawOutline(UIPainter& painter) const
 {
 	sf::RectangleShape rect({ Width, Height });
 	rect.setOrigin({ 0.5f * Width, 0.5f * Height });
@@ -42,6 +59,13 @@ void UICard::drawOutline(UIPainter& painter) const
 	rect.setFillColor(Color::LightGrayGreen);
 	rect.setOutlineThickness(5.);
 	painter.Draw(rect);
+
+	draw(painter);
+}
+
+sf::FloatRect UICard::GetBoundingRect() const
+{
+	return { -0.5f * Width, 0.5f * Height, Width, Height };
 }
 
 sf::Font UIOpenedCard::_font = loadFont("ds-kork3.ttf");
@@ -53,10 +77,18 @@ UIOpenedCard::UIOpenedCard(const Card& card)
 
 void UIOpenedCard::draw(UIPainter& painter) const
 {
-	sf::RectangleShape rect({ Width - InnerOffset, Height - InnerOffset });
 	sf::Text text;
-	rect.setFillColor(sf::Color::Red);
-	painter.Draw(rect);
+	text.move(-20.f, 20.f);
+	text.setCharacterSize(static_cast<unsigned int>(Width / 2.5));
+	text.setFont(_font);
+	text.setFillColor(Color::DarkBrown);
+
+	text.setString(getRank(_card.GetRank()));
+	painter.Draw(text);
+
+	text.move(20.f, 0.f);
+	text.setString(getSuit(_card.GetSuit(), true));
+	painter.Draw(text);
 }
 
 void UIClosedCard::draw(UIPainter& painter) const

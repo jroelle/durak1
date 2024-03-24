@@ -32,9 +32,6 @@ public:
 
 protected:
 	virtual void draw(UIPainter&) const = 0;
-
-private:
-	void drawOutline(UIPainter&) const;
 };
 
 class UIOpenedCard final : public UICard
