@@ -22,8 +22,8 @@ public:
 	virtual ~UICard() = default;
 	void Draw(UIPainter&) const override final;
 
-	static constexpr double Width = 71.;
-	static constexpr double Height = 100.;
+	static constexpr double Width = 105.;
+	static constexpr double Height = 150;
 	static constexpr double InnerOffset = 5.;
 
 protected:
@@ -52,4 +52,13 @@ public:
 
 private:
 	void draw(UIPainter&) const override;
+};
+
+class UISkipButton final : public UIObject
+{
+public:
+	static constexpr double Size = 50.;
+	static constexpr double IconSize = 40.;
+
+	void Draw(UIPainter&) const override;
 };

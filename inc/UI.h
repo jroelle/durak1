@@ -43,6 +43,10 @@ public:
 	std::optional<Card> UserPickCard(const User&);
 
 private:
+	sf::Vector2f toModel(const sf::Vector2i&) const;
+	sf::Vector2i toScreen(const sf::Vector2f&) const;
+
+private:
 	struct Data;
 
 	sf::RenderWindow _window;

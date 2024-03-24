@@ -9,6 +9,16 @@
 
 namespace
 {
+	inline sf::Vector2f toModel(const sf::RenderTarget& target, const sf::Vector2i& screenCoords)
+	{
+
+	}
+
+	inline sf::Vector2i toScreen(const sf::Vector2f)
+	{
+
+	}
+
 	class ViewRestorer
 	{
 	public:
@@ -75,8 +85,9 @@ struct UI::Data
 	{
 		enum Value : int
 		{
-			Default = 0,
-			DraggingCard = 1 << 0,
+			Default			= 0,
+			DraggingCard	= 1 << 0,
+			PickingCard		= 1 << 1,
 		};
 	};
 
@@ -111,6 +122,7 @@ void UI::Update(double msDelta)
 		return;
 
 	Mutex::Guard guard(Mutex::Get());
+	const auto size = _window.getView().getSize();
 	TransformPainter painter(_window);
 
 	if (_data->flags & Data::Flag::DraggingCard)
@@ -118,6 +130,13 @@ void UI::Update(double msDelta)
 		UIOpenedCard card(Card{ Card::Suit::Diamonds, Card::Rank::Ace });
 		painter.SetPosition(_data->cursorPosition);
 		card.Draw(painter);
+	}
+
+	if (_data->flags & Data::Flag::PickingCard)
+	{
+		UISkipButton button;
+		painter.SetPosition({ size.x, size.y * 1.5f });
+		button.Draw(painter);
 	}
 }
 
@@ -127,7 +146,11 @@ bool UI::HandleEvent(const sf::Event& event)
 	switch (event.type)
 	{
 	case sf::Event::EventType::MouseButtonPressed:
-		_data->flags |= Data::Flag::DraggingCard;
+		if (_data->flags & Data::Flag::PickingCard)
+		{
+			//_data->cursorPosition = toModel({ event.mouseMove.x, event.mouseMove.y });
+			_data->flags |= Data::Flag::DraggingCard;
+		}
 		break;
 
 	case sf::Event::EventType::MouseButtonReleased:
@@ -135,7 +158,7 @@ bool UI::HandleEvent(const sf::Event& event)
 		break;
 
 	case sf::Event::EventType::MouseMoved:
-		_data->cursorPosition = _window.mapPixelToCoords({ event.mouseMove.x * 2, event.mouseMove.y * 2 });
+		_data->cursorPosition = toModel({ event.mouseMove.x, event.mouseMove.y });
 		break;
 	}
 
@@ -189,5 +212,28 @@ void UI::OnUserLose(const Player& opponent, const Context& context)
 
 std::optional<Card> UI::UserPickCard(const User& user)
 {
-	return std::optional<Card>();
+	std::optional<Card> card;
+	bool skip = false;
+
+	_data->flags |= Data::Flag::PickingCard;
+	while (true)
+	{
+		// ...
+
+		if (card || skip)
+			break;
+	}
+	_data->flags &= ~Data::Flag::PickingCard;
+	int b = 0;
+	return card;
+}
+
+sf::Vector2f UI::toModel(const sf::Vector2i& screen) const
+{
+	return _window.mapPixelToCoords(screen * 2);
+}
+
+sf::Vector2i UI::toScreen(const sf::Vector2f& model) const
+{
+	return _window.mapCoordsToPixel(model * 0.5f);
 }
