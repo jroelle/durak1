@@ -16,6 +16,8 @@ add_executable(durak1 main.cpp
 					"src/Context.cpp"
 					"inc/Deck.h"
 					"src/Deck.cpp"
+					"inc/Drawing.h"
+					"src/Drawing.cpp"
 					"inc/Game.h"
 					"src/Game.cpp"
 					"inc/Hand.h"
@@ -30,12 +32,10 @@ add_executable(durak1 main.cpp
 					"src/Round.cpp"
 					"inc/UI.h"
 					"src/UI.cpp"
-					"inc/UIObject.h"
-					"src/UIObject.cpp"
 					"inc/User.h"
 					"src/User.cpp"
 					"inc/Utility.hpp"
- "out/build/debug/ds-kork3.ttf")
+)
 
 target_link_libraries(durak1 PRIVATE sfml-graphics sfml-window sfml-system)
 

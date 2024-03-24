@@ -6,11 +6,8 @@
 namespace sf
 {
 	class RenderWindow;
-	class RenderTarget;
-	class Drawable;
 	class Event;
 }
-
 class Round;
 class Player;
 class Deck;
@@ -52,17 +49,4 @@ private:
 
 	sf::RenderWindow _window;
 	std::unique_ptr<Data> _data;
-};
-
-class UIPainter
-{
-public:
-	UIPainter(sf::RenderTarget& target)
-		: _target(target)
-	{}
-	virtual ~UIPainter() = default;
-	virtual void Draw(const sf::Drawable&) = 0;
-
-protected:
-	sf::RenderTarget& _target;
 };

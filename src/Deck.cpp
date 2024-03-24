@@ -58,3 +58,8 @@ std::optional<Card> Deck::PopFirst()
 	_queue.pop();
 	return card;
 }
+
+size_t Deck::GetCount() const
+{
+	return _queue.size();
+}

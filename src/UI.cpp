@@ -1,7 +1,7 @@
 #include "UI.h"
 #include <array>
 #include <SFML/Graphics/RenderWindow.hpp>
-#include "UIObject.h"
+#include "Drawing.h"
 #include "Color.h"
 #include "Hand.h"
 #include "Card.h"
@@ -25,49 +25,6 @@ namespace
 		sf::RenderTarget& _target;
 	};
 
-	class TransformPainter : public UIPainter
-	{
-	public:
-		using UIPainter::UIPainter;
-		virtual ~TransformPainter() = default;
-
-		void Draw(const sf::Drawable& object) override
-		{
-			ViewRestorer restorer(_target);
-
-			sf::View view;
-			view.move(-_position);
-			view.setRotation(_angleDeg);
-			_target.setView(view);
-
-			_target.draw(object);
-		}
-
-		void SetPosition(const sf::Vector2f& position)
-		{
-			_position = position;
-		}
-
-		const sf::Vector2f& GetPosition() const
-		{
-			return _position;
-		}
-
-		void SetAngleDeg(float angleDeg)
-		{
-			_angleDeg = angleDeg;
-		}
-
-		float GetAngleDeg() const
-		{
-			return _angleDeg;
-		}
-
-	private:
-		sf::Vector2f _position;
-		float _angleDeg = 0.;
-	};
-
 	class Animation
 	{
 	public:
@@ -76,7 +33,7 @@ namespace
 			// TODO
 		}
 
-		void Update(UIPainter&, double msDelta)
+		void Update(sf::RenderTarget&, double msDelta)
 		{
 			// TODO
 		}
@@ -134,43 +91,18 @@ bool UI::NeedsToUpdate() const
 
 void UI::Update(double msDelta)
 {
+	Mutex::Guard guard(Mutex::Get());
 	if (!NeedsToUpdate())
 		return;
 
-	Mutex::Guard guard(Mutex::Get());
-	const auto size = _window.getView().getSize();
+	_data->animation.Update(_window, msDelta);
 
-	{
-		sf::RectangleShape bg(size);
-		bg.setFillColor(Color::DarkBrown);
-		_window.draw(bg);
-	}
+	Screen::Table table;
+	_window.draw(table);
 
-	TransformPainter painter(_window);
-
-	_data->animation.Update(painter, msDelta);
-
-	if (_data->flags & Data::Flag::PickingCard)
-	{
-		UISkipButton button;
-		painter.SetPosition({ size.x, size.y * 1.5f });
-		button.Draw(painter);
-	}
-
-	if (_data->flags & Data::Flag::DraggingCard)
-	{
-		{
-			UIOpenedCard card({ Card::Suit::Diamonds, Card::Rank::Jack });
-			painter.SetPosition(_data->cursorPosition);
-			card.Draw(painter);
-		}
-
-		{
-			UIClosedCard card;
-			painter.SetPosition(_data->cursorPosition + sf::Vector2f{ 200.f, 0.f });
-			card.Draw(painter);
-		}
-	}
+	Screen::OpenCard openCard({ Card::Suit::Diamonds, Card::Rank::Jack });
+	openCard.setOrigin(_data->cursorPosition);
+	_window.draw(openCard);
 
 	if (_data->animation.IsEmpty())
 		_data->flags &= ~Data::Flag::NeedRedraw;
