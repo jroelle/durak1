@@ -34,10 +34,13 @@ namespace
 		while (ui->GetWindow().isOpen())
 		{
 			auto& window = ui->GetWindow();
-			window.clear();
-			ui->Update(clock.getElapsedTime().asMilliseconds());
-			clock.restart();
-			window.display();
+			if (ui->NeedsToUpdate())
+			{
+				window.clear();
+				ui->Update(clock.getElapsedTime().asMilliseconds());
+				clock.restart();
+				window.display();
+			}
 		}
 	}
 

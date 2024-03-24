@@ -2,20 +2,25 @@
 #include <cmath>
 #include <numbers>
 #include <SFML/Graphics/RectangleShape.hpp>
-#include <SFML/Graphics/VertexArray.hpp>
-#include <SFML/Graphics/Color.hpp>
+#include <SFML/Graphics/Font.hpp>
+#include <SFML/Graphics/Text.hpp>
 #include "UI.h"
+#include "Color.h"
 
 namespace
 {
-	struct Color
+	inline sf::Font loadFont(const std::string& fileName)
 	{
-		static inline sf::Color CardOutline = sf::Color::Blue;
-		static inline sf::Color CardBg = sf::Color(230, 230, 230);
-		static inline sf::Color ClosedCard = sf::Color::Blue;
-		static inline sf::Color ButtonFill = sf::Color::Black;
-		static inline sf::Color ButtonLine = sf::Color(128, 128, 128);
-	};
+		sf::Font font;
+		font.loadFromFile(fileName);
+		return font;
+	}
+
+	inline void setColor(sf::VertexArray& vertices, const sf::Color& color)
+	{
+		for (size_t i = 0; i < vertices.getVertexCount(); ++i)
+			vertices[i].color = color;
+	}
 }
 
 void UICard::Draw(UIPainter& painter) const
@@ -24,14 +29,22 @@ void UICard::Draw(UIPainter& painter) const
 	draw(painter);
 }
 
+sf::FloatRect UICard::GetBoundingRect() const
+{
+	return { -0.5f * Width, 0.5f * Height, Width, Height };
+}
+
 void UICard::drawOutline(UIPainter& painter) const
 {
 	sf::RectangleShape rect({ Width, Height });
-	rect.setOutlineColor(Color::CardOutline);
-	rect.setFillColor(Color::CardBg);
+	rect.setOrigin({ 0.5f * Width, 0.5f * Height });
+	rect.setOutlineColor(Color::DarkBrown);
+	rect.setFillColor(Color::LightGrayGreen);
 	rect.setOutlineThickness(5.);
 	painter.Draw(rect);
 }
+
+sf::Font UIOpenedCard::_font = loadFont("ds-kork3.ttf");
 
 UIOpenedCard::UIOpenedCard(const Card& card)
 	: _card(card)
@@ -41,6 +54,7 @@ UIOpenedCard::UIOpenedCard(const Card& card)
 void UIOpenedCard::draw(UIPainter& painter) const
 {
 	sf::RectangleShape rect({ Width - InnerOffset, Height - InnerOffset });
+	sf::Text text;
 	rect.setFillColor(sf::Color::Red);
 	painter.Draw(rect);
 }
@@ -48,30 +62,44 @@ void UIOpenedCard::draw(UIPainter& painter) const
 void UIClosedCard::draw(UIPainter& painter) const
 {
 	sf::RectangleShape rect({ Width, Height });
-	rect.setFillColor(Color::ClosedCard);
+	rect.setFillColor(Color::DarkBrown);
 	painter.Draw(rect);
 }
 
 void UISkipButton::Draw(UIPainter& painter) const
 {
-	sf::RectangleShape rect({ Size, Size });
-	rect.setOrigin({ Size * 0.5f, Size * 0.5f });
-	rect.setFillColor(Color::ButtonFill);
-	rect.setOutlineColor(Color::ButtonLine);
-	rect.setOutlineThickness(Size / 25);
+	sf::RectangleShape rect;
+	rect.setOrigin(Size * 0.5f, Size * 0.5f);
+	rect.setSize({ Size, Size });
+	rect.setFillColor(Color::DarkBrown);
 	painter.Draw(rect);
 
-	const double offset = IconSize * 0.5;
-	sf::VertexArray line(sf::PrimitiveType::Lines, 2);
+	sf::Color bg = Color::LightGrayGreen;
+	bg.a = 30;
+	rect.setFillColor(bg);
+	painter.Draw(rect);
 
-	line[0].color = Color::ButtonLine;
-	line[1].color = Color::ButtonLine;
+	sf::VertexArray square(sf::PrimitiveType::LineStrip, 5);
+	square[0].position = { -0.5f * Size, 0.5f * Size };
+	square[1].position = { 0.5f * Size, 0.5f * Size };
+	square[2].position = { 0.5f * Size, -0.5f * Size };
+	square[3].position = { -0.5f * Size, -0.5f * Size };
+	square[4].position = square[0].position;
+	setColor(square, Color::LightGrayGreen);
+	painter.Draw(square);
 
-	line[0].position = { offset, -offset };
-	line[1].position = { -offset, offset };
-	painter.Draw(line);
+	sf::VertexArray cross(sf::PrimitiveType::Lines, 2);
+	cross[0].position = { -0.5f * IconSize, 0.5f * IconSize };
+	cross[1].position = { 0.5f * IconSize, -0.5f * IconSize };
+	setColor(cross, Color::LightGrayGreen);
+	painter.Draw(cross);
 
-	line[0].position = { -offset, -offset };
-	line[1].position = { offset, offset };
-	painter.Draw(line);
+	cross[0].position = { 0.5f * IconSize, 0.5f * IconSize };
+	cross[1].position = { -0.5f * IconSize, -0.5f * IconSize };
+	painter.Draw(cross);
+}
+
+sf::FloatRect UISkipButton::GetBoundingRect() const
+{
+	return { -0.5f * Size, 0.5f * Size, Size, Size };
 }

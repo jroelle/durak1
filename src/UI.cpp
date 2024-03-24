@@ -1,24 +1,14 @@
 #include "UI.h"
 #include <array>
 #include <SFML/Graphics/RenderWindow.hpp>
-#include <SFML/Graphics/Text.hpp>
 #include "UIObject.h"
+#include "Color.h"
 #include "Hand.h"
 #include "Card.h"
 #include "Mutex.h"
 
 namespace
 {
-	inline sf::Vector2f toModel(const sf::RenderTarget& target, const sf::Vector2i& screenCoords)
-	{
-
-	}
-
-	inline sf::Vector2i toScreen(const sf::Vector2f)
-	{
-
-	}
-
 	class ViewRestorer
 	{
 	public:
@@ -77,6 +67,25 @@ namespace
 		sf::Vector2f _position;
 		float _angleDeg = 0.;
 	};
+
+	class Animation
+	{
+	public:
+		void Add()
+		{
+			// TODO
+		}
+
+		void Update(double msDelta)
+		{
+			// TODO
+		}
+
+		bool IsEmpty() const
+		{
+			return true;
+		}
+	};
 }
 
 struct UI::Data
@@ -88,9 +97,11 @@ struct UI::Data
 			Default			= 0,
 			DraggingCard	= 1 << 0,
 			PickingCard		= 1 << 1,
+			NeedRedraw		= 1 << 2,
 		};
 	};
 
+	Animation animation;
 	std::vector<Card> roundCards;
 	std::underlying_type_t<Flag::Value> flags = Flag::Default;
 	sf::Vector2f cursorPosition;
@@ -116,14 +127,26 @@ const sf::RenderWindow& UI::GetWindow() const
 	return _window;
 }
 
+bool UI::NeedsToUpdate() const
+{
+	return _data && _data->flags & Data::Flag::NeedRedraw;
+}
+
 void UI::Update(double msDelta)
 {
-	if (!_data)
+	if (!NeedsToUpdate())
 		return;
 
 	Mutex::Guard guard(Mutex::Get());
 	const auto size = _window.getView().getSize();
+
+	sf::RectangleShape bg(size);
+	bg.setFillColor(Color::DarkBrown);
+	_window.draw(bg);
+
 	TransformPainter painter(_window);
+
+	_data->animation.Update(msDelta);
 
 	if (_data->flags & Data::Flag::DraggingCard)
 	{
@@ -138,6 +161,9 @@ void UI::Update(double msDelta)
 		painter.SetPosition({ size.x, size.y * 1.5f });
 		button.Draw(painter);
 	}
+
+	if (_data->animation.IsEmpty())
+		_data->flags &= ~Data::Flag::NeedRedraw;
 }
 
 bool UI::HandleEvent(const sf::Event& event)
@@ -167,47 +193,47 @@ bool UI::HandleEvent(const sf::Event& event)
 
 void UI::OnRoundStart(const Round& round)
 {
-
+	_data->flags |= Data::Flag::NeedRedraw;
 }
 
 void UI::OnPlayerAttack(const Player& attacker, const Card& attackCard)
 {
-
+	_data->flags |= Data::Flag::NeedRedraw;
 }
 
 void UI::OnPlayerDefend(const Player& defender, const Card& attackCard, const Card& defendCard)
 {
-
+	_data->flags |= Data::Flag::NeedRedraw;
 }
 
 void UI::OnRoundEnd(const Round& round)
 {
-
+	_data->flags |= Data::Flag::NeedRedraw;
 }
 
 void UI::OnPlayerDrawCards(const Player& player, const Deck& deck)
 {
-
+	_data->flags |= Data::Flag::NeedRedraw;
 }
 
 void UI::OnPlayerDrawCards(const Player& player, const Round& round)
 {
-
+	_data->flags |= Data::Flag::NeedRedraw;
 }
 
 void UI::OnStartGame(const Player& first, const Context& context)
 {
-
+	_data->flags |= Data::Flag::NeedRedraw;
 }
 
 void UI::OnUserWin(const Player& user, const Context& context)
 {
-
+	_data->flags |= Data::Flag::NeedRedraw;
 }
 
 void UI::OnUserLose(const Player& opponent, const Context& context)
 {
-
+	_data->flags |= Data::Flag::NeedRedraw;
 }
 
 std::optional<Card> UI::UserPickCard(const User& user)
@@ -224,7 +250,6 @@ std::optional<Card> UI::UserPickCard(const User& user)
 			break;
 	}
 	_data->flags &= ~Data::Flag::PickingCard;
-	int b = 0;
 	return card;
 }
 

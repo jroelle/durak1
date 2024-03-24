@@ -26,6 +26,7 @@ public:
 
 	sf::RenderWindow& GetWindow();
 	const sf::RenderWindow& GetWindow() const;
+	bool NeedsToUpdate() const;
 	void Update(double msDelta);
 	bool HandleEvent(const sf::Event&);
 

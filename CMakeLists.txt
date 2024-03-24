@@ -11,6 +11,7 @@ add_executable(durak1 main.cpp
 					"src/Bot.cpp"
 					"inc/Card.h"
 					"src/Card.cpp"
+					"inc/Color.h"
 					"inc/Context.h"
 					"src/Context.cpp"
 					"inc/Deck.h"
@@ -19,7 +20,6 @@ add_executable(durak1 main.cpp
 					"src/Game.cpp"
 					"inc/Hand.h"
 					"src/Hand.cpp"
-					
 					"inc/Mutex.h"
 					"src/Mutex.cpp"
 					"inc/Player.h"
