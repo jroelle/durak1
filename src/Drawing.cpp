@@ -7,7 +7,6 @@
 #include <SFML/Graphics/Text.hpp>
 #include "UI.h"
 #include "Color.h"
-#include "Card.h"
 #include "Deck.h"
 
 namespace
@@ -124,6 +123,21 @@ namespace Screen
 		{
 			drawing->draw(target, states);
 		}
+
+		if constexpr (true)
+		{
+			sf::VertexArray axis(sf::PrimitiveType::LineStrip, 3);
+			setColor(axis, sf::Color::Red);
+			axis[0].position = { 0.f, 0.f };
+			axis[1].position = { 20.f, 0.f };
+			axis[2].position = { 18.f, 5.f };
+			target.draw(axis);
+
+			setColor(axis, sf::Color::Blue);
+			axis[1].position = { 0.f, 20.f };
+			axis[2].position = { -5.f, 18.f };
+			target.draw(axis);
+		}
 	}
 
 	void Drawing::addChild(const std::shared_ptr<Drawing>& child)
@@ -218,19 +232,16 @@ namespace Screen
 		if (auto lastCard = _deck.GetLast())
 		{
 			auto openCard = std::make_shared<Screen::OpenCard>(*lastCard);
-			openCard->rotate(90.f);
-			//openCard->setOrigin(0.f, 0.f);
 			addChild(openCard);
 		}
-		{
-			auto firstCard = std::make_shared<Screen::CloseCard>();
-			firstCard->setOrigin(0.f, 0.5f * Card::Height);
-			addChild(firstCard);
-		}
+		//{
+		//	auto firstCard = std::make_shared<Screen::CloseCard>();
+		//	//firstCard->setOrigin(0.f, 0.5f * Card::Height);
+		//	addChild(firstCard);
+		//}
 	}
 
 	void Deck::run(sf::RenderTarget& target) const
 	{
-		// TODO
 	}
 }
