@@ -25,19 +25,21 @@ namespace
 		return firstPlayer ? firstPlayer->first : players.GetUser();
 	}
 
-	inline void UILoop(std::shared_ptr<UI> ui)
+	inline void UILoop(std::shared_ptr<Context> context)
 	{
-		ui->GetWindow().setVerticalSyncEnabled(true);
-		ui->GetWindow().setActive(true);
+		auto& ui = context->GetUI();
+
+		ui.GetWindow().setVerticalSyncEnabled(true);
+		ui.GetWindow().setActive(true);
 
 		sf::Clock clock;
-		while (ui->GetWindow().isOpen())
+		while (ui.GetWindow().isOpen())
 		{
-			auto& window = ui->GetWindow();
-			if (ui->NeedsToUpdate())
+			auto& window = ui.GetWindow();
+			if (ui.NeedsToUpdate())
 			{
 				window.clear();
-				ui->Update(clock.getElapsedTime().asMilliseconds());
+				ui.Update(*context, clock.getElapsedTime().asMilliseconds());
 				clock.restart();
 				window.display();
 			}
@@ -65,7 +67,7 @@ void Game::Run()
 
 	ui->GetWindow().setActive(false);
 
-	std::thread render(&UILoop, ui);
+	std::thread render(&UILoop, context);
 	render.detach();
 
 	std::thread logic(&logicLoop, context);

@@ -88,22 +88,22 @@ namespace
 		}
 	}
 
-	struct TransformView
+	struct ViewGuard
 	{
 	public:
-		TransformView(sf::RenderTarget& target, const sf::Transformable& drawing)
+		ViewGuard(sf::RenderTarget& target, const sf::Transformable& drawing)
 			: _target(target)
 			, _view(_target.getView())
 		{
 			sf::View newView = _view;
 
-			newView.setCenter(_view.getCenter() + drawing.getOrigin());
-			newView.setRotation(_view.getRotation() + drawing.getRotation());
+			newView.setCenter(_view.getCenter() - drawing.getOrigin());
+			newView.setRotation(_view.getRotation() - drawing.getRotation());
 
 			_target.setView(newView);
 		}
 
-		~TransformView()
+		~ViewGuard()
 		{
 			_target.setView(_view);
 		}
@@ -118,20 +118,20 @@ namespace Screen
 {
 	void Drawing::draw(sf::RenderTarget& target, sf::RenderStates states) const
 	{
-		TransformView transformView(target, *this);
-		target.draw(*this, states);
-		for (const Drawing& drawing : _children)
+		ViewGuard guard(target, *this);
+		run(target);
+		for (const auto& drawing : _children)
 		{
-			drawing.draw(target, states);
+			drawing->draw(target, states);
 		}
 	}
 
-	void Drawing::addChild(Drawing&& child)
+	void Drawing::addChild(const std::shared_ptr<Drawing>& child)
 	{
-		_children.insert_after(_children.end(), std::move(child));
+		_children.push_back(child);
 	}
 
-	void Table::draw(sf::RenderTarget& target, sf::RenderStates) const
+	void Table::run(sf::RenderTarget& target) const
 	{
 		sf::RectangleShape table(target.getView().getSize());
 		table.setFillColor(Color::DarkBrown);
@@ -145,7 +145,7 @@ namespace Screen
 	{
 	}
 
-	void OpenCard::draw(sf::RenderTarget& target, sf::RenderStates states) const
+	void OpenCard::run(sf::RenderTarget& target) const
 	{
 		constexpr float textOffset = Width * 0.05f;
 
@@ -165,7 +165,7 @@ namespace Screen
 		target.draw(text);
 	}
 
-	void CloseCard::draw(sf::RenderTarget& target, sf::RenderStates) const
+	void CloseCard::run(sf::RenderTarget& target) const
 	{
 		constexpr float patternStepCoeff = 0.1f;
 		constexpr float patternSizeCoeff = 0.95f;
@@ -174,12 +174,12 @@ namespace Screen
 		drawPointPattern(target, Color::LightGrayGreen, Width * patternSizeCoeff, Height * patternSizeCoeff, Width * patternStepCoeff);
 	}
 
-	void Suit::draw(sf::RenderTarget& target, sf::RenderStates) const
+	void Suit::run(sf::RenderTarget& target) const
 	{
 		// TODO
 	}
 
-	void SkipButton::draw(sf::RenderTarget& target, sf::RenderStates) const
+	void SkipButton::run(sf::RenderTarget& target) const
 	{
 		sf::RectangleShape rect;
 		rect.setOrigin(Size * 0.5f, Size * 0.5f);
@@ -217,16 +217,20 @@ namespace Screen
 	{
 		if (auto lastCard = _deck.GetLast())
 		{
-			Screen::OpenCard openCard(*lastCard);
-			addChild(std::move(openCard));
+			auto openCard = std::make_shared<Screen::OpenCard>(*lastCard);
+			openCard->setOrigin(getOrigin());
+			openCard->rotate(90.f);
+			//openCard->setOrigin(0.f, 0.f);
+			addChild(openCard);
 		}
 		{
-			Screen::CloseCard firstCard;
-			addChild(std::move(firstCard));
+			auto firstCard = std::make_shared<Screen::CloseCard>();
+			firstCard->setOrigin(0.f, 0.5f * Card::Height);
+			addChild(firstCard);
 		}
 	}
 
-	void Deck::draw(sf::RenderTarget& target, sf::RenderStates) const
+	void Deck::run(sf::RenderTarget& target) const
 	{
 		// TODO
 	}

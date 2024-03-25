@@ -24,7 +24,7 @@ public:
 	sf::RenderWindow& GetWindow();
 	const sf::RenderWindow& GetWindow() const;
 	bool NeedsToUpdate() const;
-	void Update(double msDelta);
+	void Update(const Context&, double msDelta);
 	bool HandleEvent(const sf::Event&);
 
 	void OnRoundStart(const Round&);

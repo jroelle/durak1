@@ -6,6 +6,7 @@
 #include "Hand.h"
 #include "Card.h"
 #include "Mutex.h"
+#include "Context.h"
 
 namespace
 {
@@ -89,20 +90,40 @@ bool UI::NeedsToUpdate() const
 	return _data && _data->flags & Data::Flag::NeedRedraw;
 }
 
-void UI::Update(double msDelta)
+void UI::Update(const Context& context, double msDelta)
 {
-	Mutex::Guard guard(Mutex::Get());
 	if (!NeedsToUpdate())
 		return;
 
+	Mutex::Guard guard(Mutex::Get());
+
+	const auto size = _window.getView().getSize();
 	_data->animation.Update(_window, msDelta);
 
-	Screen::Table table;
-	_window.draw(table);
+	{
+		Screen::Table table;
+		_window.draw(table);
+	}
 
-	Screen::OpenCard openCard({ Card::Suit::Diamonds, Card::Rank::Jack });
-	openCard.setOrigin(_data->cursorPosition);
-	_window.draw(openCard);
+	{
+		Screen::Deck deck(context.GetDeck());
+		deck.setOrigin(size.x - 0.5f * Screen::Card::Width, 0.5f * size.y);
+		_window.draw(deck);
+	}
+
+	if (_data->flags & Data::Flag::PickingCard)
+	{
+		Screen::SkipButton skipButton;
+		skipButton.setOrigin(0.5f * size.x, size.y - Screen::Card::Height);
+		_window.draw(skipButton);
+	}
+
+	if (_data->flags & Data::Flag::DraggingCard)
+	{
+		Screen::OpenCard openCard({ Card::Suit::Diamonds, Card::Rank::Jack });
+		openCard.setOrigin(_data->cursorPosition);
+		_window.draw(openCard);
+	}
 
 	if (_data->animation.IsEmpty())
 		_data->flags &= ~Data::Flag::NeedRedraw;
@@ -200,10 +221,10 @@ std::optional<Card> UI::UserPickCard(const User& user)
 
 sf::Vector2f UI::toModel(const sf::Vector2i& screen) const
 {
-	return _window.mapPixelToCoords(screen * 2);
+	return _window.mapPixelToCoords(screen);
 }
 
 sf::Vector2i UI::toScreen(const sf::Vector2f& model) const
 {
-	return _window.mapCoordsToPixel(model * 0.5f);
+	return _window.mapCoordsToPixel(model);
 }
