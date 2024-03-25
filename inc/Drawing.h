@@ -22,7 +22,7 @@ namespace Screen
 	public:
 		virtual ~Drawing() = default;
 		void draw(sf::RenderTarget&, sf::RenderStates) const override final;
-		void addChild(const std::shared_ptr<Drawing>&);
+		Drawing& addChild(const std::shared_ptr<Drawing>&);
 
 	protected:
 		virtual void run(sf::RenderTarget&) const {}

@@ -87,6 +87,17 @@ namespace
 		}
 	}
 
+	void rotateViewAt(sf::Vector2f coord, sf::View& view, float rotation)
+	{
+		const sf::Vector2f offset{ coord - view.getCenter() };
+		const float rotationInRadians{ rotation * std::numbers::pi_v<float> / 180.f };
+		const float sine{ std::sin(rotationInRadians) };
+		const float cosine{ std::cos(rotationInRadians) };
+		const sf::Vector2f rotatedOffset{ cosine * offset.x - sine * offset.y, sine * offset.x + cosine * offset.y };
+		view.rotate(rotation);
+		view.move(offset - rotatedOffset);
+	}
+
 	struct ViewGuard
 	{
 	public:
@@ -97,7 +108,8 @@ namespace
 			sf::View newView = _view;
 
 			newView.setCenter(_view.getCenter() - drawing.getOrigin());
-			newView.setRotation(_view.getRotation() - drawing.getRotation());
+			//newView.setRotation(_view.getRotation() - drawing.getRotation());
+			rotateViewAt(drawing.getOrigin(), newView, drawing.getRotation());
 
 			_target.setView(newView);
 		}
@@ -115,6 +127,43 @@ namespace
 
 namespace Screen
 {
+	template<typename T>
+	class Holder final : public Drawing
+	{
+	public:
+		Holder(const T& drawing)
+			: _drawing(drawing)
+		{}
+
+		Holder(T&& drawing)
+			: _drawing(std::move(drawing))
+		{}
+
+		template<typename... Args>
+		Holder(Args&&... args)
+			: _drawing(std::forward<Args>(args)...)
+		{}
+
+		T& get()
+		{
+			return _drawing;
+		}
+
+		const T& get() const
+		{
+			return _drawing;
+		}
+
+	protected:
+		void run(sf::RenderTarget& target) const override
+		{
+			target.draw(get());
+		}
+
+	private:
+		T _drawing;
+	};
+
 	void Drawing::draw(sf::RenderTarget& target, sf::RenderStates states) const
 	{
 		ViewGuard guard(target, *this);
@@ -140,9 +189,10 @@ namespace Screen
 		}
 	}
 
-	void Drawing::addChild(const std::shared_ptr<Drawing>& child)
+	Drawing& Drawing::addChild(const std::shared_ptr<Drawing>& child)
 	{
 		_children.push_back(child);
+		return *_children.back();
 	}
 
 	void Table::run(sf::RenderTarget& target) const
@@ -231,14 +281,27 @@ namespace Screen
 	{
 		if (auto lastCard = _deck.GetLast())
 		{
+			auto child = std::make_shared<Screen::Drawing>();
+			child->rotate(90.f);
+
 			auto openCard = std::make_shared<Screen::OpenCard>(*lastCard);
-			addChild(openCard);
+			openCard->setOrigin(0.f, -0.5f * Card::Width);
+			child->addChild(openCard);
+
+			addChild(child);
 		}
-		//{
-		//	auto firstCard = std::make_shared<Screen::CloseCard>();
-		//	//firstCard->setOrigin(0.f, 0.5f * Card::Height);
-		//	addChild(firstCard);
-		//}
+		if (_deck.GetCount() > 1)
+		{
+			constexpr float deckHeightCoeff = 1.f;
+			const float deckHeight = static_cast<float>(_deck.GetCount());
+
+			auto cards = createBeveledRectangle(true, Color::LightGrayGreen, Card::Width, Card::Height, Card::Bevel);
+			addChild(std::make_shared<Holder<sf::VertexArray>>(std::move(cards)));
+
+			auto firstCard = std::make_shared<Screen::CloseCard>();
+			firstCard->setOrigin(0.f, -deckHeight);
+			addChild(firstCard);
+		}
 	}
 
 	void Deck::run(sf::RenderTarget& target) const
