@@ -173,7 +173,7 @@ namespace Screen
 			drawing->draw(target, states);
 		}
 
-		if constexpr (true)
+		if constexpr (false)
 		{
 			sf::VertexArray axis(sf::PrimitiveType::LineStrip, 3);
 			setColor(axis, sf::Color::Red);
@@ -298,13 +298,12 @@ namespace Screen
 			auto cards = createBeveledRectangle(true, Color::LightGrayGreen, Card::Width, Card::Height, Card::Bevel);
 			addChild(std::make_shared<Holder<sf::VertexArray>>(std::move(cards)));
 
+			cards = createBeveledRectangle(false, Color::LightGrayGreen, Card::Width, Card::Height, Card::Bevel);
+			addChild(std::make_shared<Holder<sf::VertexArray>>(std::move(cards)));
+
 			auto firstCard = std::make_shared<Screen::CloseCard>();
 			firstCard->setOrigin(0.f, -deckHeight);
 			addChild(firstCard);
 		}
-	}
-
-	void Deck::run(sf::RenderTarget& target) const
-	{
 	}
 }

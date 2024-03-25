@@ -88,9 +88,6 @@ namespace Screen
 		Deck(const ::Deck&);
 
 	private:
-		void run(sf::RenderTarget&) const override;
-
-	private:
 		const ::Deck& _deck;
 	};
 }

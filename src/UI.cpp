@@ -107,7 +107,7 @@ void UI::Update(const Context& context, double msDelta)
 
 	{
 		Screen::Deck deck(context.GetDeck());
-		deck.setOrigin(size.x - 0.5f * Screen::Card::Width, 0.5f * size.y);
+		deck.setOrigin(size.x - 0.6f * Screen::Card::Width, 0.5f * size.y);
 		_window.draw(deck);
 	}
 
