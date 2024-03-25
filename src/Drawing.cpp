@@ -218,7 +218,6 @@ namespace Screen
 		if (auto lastCard = _deck.GetLast())
 		{
 			auto openCard = std::make_shared<Screen::OpenCard>(*lastCard);
-			openCard->setOrigin(getOrigin());
 			openCard->rotate(90.f);
 			//openCard->setOrigin(0.f, 0.f);
 			addChild(openCard);

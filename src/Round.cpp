@@ -20,7 +20,7 @@ Round::Round(std::shared_ptr<Context> context, Player* attacker)
 
 std::unique_ptr<Round> Round::Run()
 {
-	auto& ui = _context->GetUI();
+	auto ui = _context->GetUI();
 	auto& players = _context->GetPlayers();
 
 	auto* attacker = _attacker;
@@ -28,7 +28,8 @@ std::unique_ptr<Round> Round::Run()
 	if (!attacker || !defender)
 		return nullptr;
 
-	ui.OnRoundStart(*this);
+	if (ui)
+		ui->OnRoundStart(*this);
 
 	_cards = {};
 	_cards.reserve(Hand::MinCount * 2);
@@ -46,30 +47,34 @@ std::unique_ptr<Round> Round::Run()
 		if (attackCard)
 		{
 			_cards.emplace_back(*attackCard);
-			ui.OnPlayerAttack(*attackerPickedCard, *attackCard);
+			if (ui)
+				ui->OnPlayerAttack(*attackerPickedCard, *attackCard);
 
 			if (const auto defendCard = defender->Defend(*_context, *attackCard))
 			{
 				_cards.emplace_back(*defendCard);
-				ui.OnPlayerDefend(*attackerPickedCard, *attackCard, *defendCard);
+				if (ui)
+					ui->OnPlayerDefend(*attackerPickedCard, *attackCard, *defendCard);
 			}
 			else
 			{
 				defender->AddCards(_cards.begin(), _cards.end());
-				ui.OnPlayerDrawCards(*defender, *this);
+				if (ui)
+					ui->OnPlayerDrawCards(*defender, *this);
 				break;
 			}
 		}
 		break;
 	}
 
-	ui.OnRoundEnd(*this);
+	if (ui)
+		ui->OnRoundEnd(*this);
 
 	const auto drawCards = [&](Player* player)
 		{
 			player->DrawCards(_context->GetDeck());
-			if (!_context->GetDeck().IsEmpty())
-				ui.OnPlayerDrawCards(*player, _context->GetDeck());
+			if (!_context->GetDeck().IsEmpty() && ui)
+				ui->OnPlayerDrawCards(*player, _context->GetDeck());
 			return _context->GetDeck().IsEmpty();
 		};
 
@@ -79,13 +84,15 @@ std::unique_ptr<Round> Round::Run()
 	const auto* user = players.GetUser();
 	if (!user->HasAnyCards())
 	{
-		ui.OnUserWin(*players.GetUser(), *_context);
+		if (ui)
+			ui->OnUserWin(*players.GetUser(), *_context);
 		return nullptr;
 	}
 
 	if (_context->GetDeck().IsEmpty() && !players.ForEachOtherPlayer(playerHasAnyCards, user))
 	{
-		ui.OnUserLose(*players.GetUser(), *_context);
+		if (ui)
+			ui->OnUserLose(*players.GetUser(), *_context);
 		return nullptr;
 	}
 

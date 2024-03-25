@@ -2,7 +2,7 @@
 #include <set>
 #include "Player.h"
 
-Context::Context(UI& ui, size_t botsNumber)
+Context::Context(std::weak_ptr<UI> ui, size_t botsNumber)
 	: _players(botsNumber)
 	, _ui(ui)
 {
@@ -35,7 +35,7 @@ Card::Suit Context::GetTrumpSuit() const
 	return _trumpSuit;
 }
 
-UI& Context::GetUI() const
+std::shared_ptr<UI> Context::GetUI() const
 {
-	return _ui;
+	return _ui.lock();
 }

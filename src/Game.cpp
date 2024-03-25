@@ -27,21 +27,23 @@ namespace
 
 	inline void UILoop(std::shared_ptr<Context> context)
 	{
-		auto& ui = context->GetUI();
-
-		ui.GetWindow().setVerticalSyncEnabled(true);
-		ui.GetWindow().setActive(true);
+		if (auto ui = context->GetUI())
+		{
+			auto& window = ui->GetWindow();
+			window.setVerticalSyncEnabled(true);
+			window.setActive(true);
+		}
 
 		sf::Clock clock;
-		while (ui.GetWindow().isOpen())
+		while (context->GetUI() && context->GetUI()->GetWindow().isOpen())
 		{
-			auto& window = ui.GetWindow();
-			if (ui.NeedsToUpdate())
+			auto ui = context->GetUI();
+			if (ui && ui->NeedsToUpdate())
 			{
-				window.clear();
-				ui.Update(*context, clock.getElapsedTime().asMilliseconds());
+				ui->GetWindow().clear();
+				ui->Update(*context, clock.getElapsedTime().asMilliseconds());
 				clock.restart();
-				window.display();
+				ui->GetWindow().display();
 			}
 		}
 	}
@@ -49,7 +51,8 @@ namespace
 	inline void logicLoop(std::shared_ptr<Context> context)
 	{
 		Player* firstPlayer = findFirstPlayer(context->GetPlayers(), context->GetTrumpSuit());
-		context->GetUI().OnStartGame(*firstPlayer, *context);
+		if (auto ui = context->GetUI())
+			ui->OnStartGame(*firstPlayer, *context);
 
 		auto round = std::make_unique<Round>(context, firstPlayer);
 
@@ -63,7 +66,7 @@ namespace
 void Game::Run()
 {
 	auto ui = std::make_shared<UI>("durak", 500, 500);
-	auto context = std::make_shared<Context>(*ui, 2);
+	auto context = std::make_shared<Context>(ui, 2);
 
 	ui->GetWindow().setActive(false);
 

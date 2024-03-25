@@ -14,7 +14,7 @@ public:
 	using RoundCards = std::vector<Card>;
 
 	Context() = delete;
-	Context(UI&, size_t botsNumber = 1);
+	Context(std::weak_ptr<UI>, size_t botsNumber = 1);
 
 	Deck& GetDeck();
 	const Deck& GetDeck() const;
@@ -23,11 +23,11 @@ public:
 	const PlayersGroup& GetPlayers() const;
 
 	Card::Suit GetTrumpSuit() const;
-	UI& GetUI() const;
+	std::shared_ptr<UI> GetUI() const;
 
 private:
 	Deck _deck;
 	PlayersGroup _players;
 	Card::Suit _trumpSuit;
-	UI& _ui;
+	std::weak_ptr<UI> _ui;
 };
