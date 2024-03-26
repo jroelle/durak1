@@ -120,7 +120,7 @@ void UI::Update(const Context& context, double msDelta)
 
 	if (_data->flags & Data::Flag::DraggingCard)
 	{
-		Screen::OpenCard openCard({ Card::Suit::Diamonds, Card::Rank::Jack });
+		Screen::OpenCard openCard({ Card::Suit::Hearts, Card::Rank::Jack });
 		openCard.setOrigin(_data->cursorPosition);
 		_window.draw(openCard);
 	}

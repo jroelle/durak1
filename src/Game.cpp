@@ -27,10 +27,12 @@ namespace
 
 	inline void UILoop(std::shared_ptr<Context> context)
 	{
+		constexpr unsigned int framerate = 60;
+
 		if (auto ui = context->GetUI())
 		{
 			auto& window = ui->GetWindow();
-			window.setVerticalSyncEnabled(true);
+			//window.setFramerateLimit(framerate);
 			window.setActive(true);
 		}
 
@@ -45,6 +47,7 @@ namespace
 				clock.restart();
 				ui->GetWindow().display();
 			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000 / framerate));
 		}
 	}
 

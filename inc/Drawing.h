@@ -66,7 +66,39 @@ namespace Screen
 		void run(sf::RenderTarget&) const override;
 	};
 
-	class Suit final : public Drawing
+	class Suit : public Drawing
+	{
+	public:
+		virtual ~Suit() = default;
+		static std::shared_ptr<Suit> create(::Card::Suit);
+
+		static constexpr float Size = 10.f;
+
+		class Hearts;
+		class Diamonds;
+		class Clubs;
+		class Spades;
+	};
+
+	class Suit::Hearts final : public Suit
+	{
+	private:
+		void run(sf::RenderTarget&) const override;
+	};
+
+	class Suit::Diamonds final : public Suit
+	{
+	private:
+		void run(sf::RenderTarget&) const override;
+	};
+
+	class Suit::Clubs final : public Suit
+	{
+	private:
+		void run(sf::RenderTarget&) const override;
+	};
+
+	class Suit::Spades final : public Suit
 	{
 	private:
 		void run(sf::RenderTarget&) const override;

@@ -7,7 +7,7 @@ namespace
 {
 	inline void forEachCard(const std::function<void(const Card&)>& callback)
 	{
-		for (const Card::Suit suit : { Card::Suit::Hearts, Card::Suit::Diamonds, Card::Suit::Clover, Card::Suit::Spades })
+		for (const Card::Suit suit : { Card::Suit::Hearts, Card::Suit::Diamonds, Card::Suit::Clubs, Card::Suit::Spades })
 		{
 			for (Card::Rank rank = Card::Rank::Min; rank <= Card::Rank::Max; rank = static_cast<Card::Rank>(static_cast<int>(rank) + 1))
 			{

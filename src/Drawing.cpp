@@ -87,7 +87,7 @@ namespace
 		}
 	}
 
-	void rotateViewAt(sf::Vector2f coord, sf::View& view, float rotation)
+	inline void rotateViewAt(sf::Vector2f coord, sf::View& view, float rotation)
 	{
 		const sf::Vector2f offset{ coord - view.getCenter() };
 		const float rotationInRadians{ rotation * std::numbers::pi_v<float> / 180.f };
@@ -212,6 +212,8 @@ namespace Screen
 	void OpenCard::run(sf::RenderTarget& target) const
 	{
 		constexpr float textOffset = Width * 0.05f;
+		constexpr unsigned int textSize = static_cast<unsigned int>(Width / 2.5);
+		constexpr float suitOffset = textSize;
 
 		drawBeveledRectangle(target, Color::LightGrayGreen, Color::DarkBrown, Width, Height, Bevel);
 
@@ -221,8 +223,12 @@ namespace Screen
 		text.setPosition(-0.5f * Width + textOffset, -0.5f * Height + textOffset);
 		text.setFillColor(Color::DarkBrown);
 
+		auto suit = Suit::create(_card.GetSuit());
+		suit->setOrigin(text.getPosition() + sf::Vector2f{ 0.f, suitOffset });
+
 		text.setString(getRank(_card.GetRank()));
 		target.draw(text);
+		target.draw(*suit);
 
 		text.setPosition(-text.getPosition());
 		text.rotate(180.f);
@@ -238,7 +244,67 @@ namespace Screen
 		drawPointPattern(target, Color::LightGrayGreen, Width * patternSizeCoeff, Height * patternSizeCoeff, Width * patternStepCoeff);
 	}
 
-	void Suit::run(sf::RenderTarget& target) const
+	std::shared_ptr<Suit> Screen::Suit::create(::Card::Suit suit)
+	{
+		switch (suit)
+		{
+		case ::Card::Suit::Hearts:		return std::make_shared<Suit::Hearts>();
+		case ::Card::Suit::Diamonds:	return std::make_shared<Suit::Diamonds>();
+		case ::Card::Suit::Clubs:		return std::make_shared<Suit::Clubs>();
+		case ::Card::Suit::Spades:		return std::make_shared<Suit::Spades>();
+		}
+		return nullptr;
+	}
+
+	void Suit::Hearts::run(sf::RenderTarget& target) const
+	{
+		constexpr float width = Size;
+		constexpr float height = width * 1.5f;
+
+		sf::CircleShape circle(0.5f * width, 8);
+		circle.setFillColor(Color::DarkBrown);
+
+		circle.setPosition(-0.5f * circle.getRadius(), 0.f);
+		target.draw(circle);
+
+		circle.setPosition(0.5f * circle.getRadius(), 0.f);
+		target.draw(circle);
+
+		const float triangleHeight = height - circle.getRadius();
+		const float tg = circle.getRadius() / triangleHeight;
+		const float angleRad = std::numbers::pi_v<float> - 2.f * std::atan(tg);
+		const float offsetX = triangleHeight * std::cos(angleRad);
+		const float offsetY = triangleHeight * std::sin(angleRad);
+
+		sf::VertexArray triangle(sf::PrimitiveType::TrianglesStrip, 4);
+		setColor(triangle, Color::DarkBrown);
+		triangle[0].position = { -offsetX, triangleHeight - offsetY };
+		triangle[1].position = { 0.f, 0.f };
+		triangle[2].position = { 0.f, triangleHeight };
+		triangle[3].position = { offsetX, triangleHeight - offsetY };
+		target.draw(triangle);
+	}
+
+	void Suit::Diamonds::run(sf::RenderTarget& target) const
+	{
+		constexpr float width = Size;
+		constexpr float height = width * 1.5f;
+
+		sf::VertexArray points(sf::PrimitiveType::TriangleFan, 4);
+		setColor(points, Color::DarkBrown);
+		points[0].position = { -0.5f * width, 0.f };
+		points[1].position = { 0.f, 0.5f * height };
+		points[2].position = { 0.5f * width, 0.f };
+		points[3].position = { 0.f, -0.5f * height };
+		target.draw(points);
+	}
+
+	void Suit::Clubs::run(sf::RenderTarget& target) const
+	{
+		// TODO
+	}
+
+	void Suit::Spades::run(sf::RenderTarget& target) const
 	{
 		// TODO
 	}

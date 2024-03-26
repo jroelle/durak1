@@ -8,7 +8,7 @@ public:
 	{
 		Hearts,
 		Diamonds,
-		Clover,
+		Clubs,
 		Spades
 	};
 
