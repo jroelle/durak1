@@ -22,13 +22,9 @@ namespace Screen
 	public:
 		virtual ~Drawing() = default;
 		void draw(sf::RenderTarget&, sf::RenderStates) const override final;
-		Drawing& addChild(const std::shared_ptr<Drawing>&);
 
 	protected:
 		virtual void run(sf::RenderTarget&) const {}
-
-	private:
-		std::vector<std::shared_ptr<Drawing>> _children;
 	};
 
 	class Table : public Drawing
@@ -42,9 +38,9 @@ namespace Screen
 	public:
 		virtual ~Card() = default;
 
-		static constexpr float Width = 65.;
-		static constexpr float Height = 100.;
-		static constexpr float Bevel = Width * 0.075f;
+		static constexpr unsigned int Size = 75;
+		sf::Vector2f getSize() const;
+		const sf::Font& getFont() const;
 	};
 
 	class OpenCard final : public Card
@@ -57,48 +53,9 @@ namespace Screen
 
 	private:
 		::Card _card;
-		static sf::Font _font;
 	};
 
 	class CloseCard final : public Card
-	{
-	private:
-		void run(sf::RenderTarget&) const override;
-	};
-
-	class Suit : public Drawing
-	{
-	public:
-		virtual ~Suit() = default;
-		static std::shared_ptr<Suit> create(::Card::Suit);
-
-		static constexpr float Size = 10.f;
-
-		class Hearts;
-		class Diamonds;
-		class Clubs;
-		class Spades;
-	};
-
-	class Suit::Hearts final : public Suit
-	{
-	private:
-		void run(sf::RenderTarget&) const override;
-	};
-
-	class Suit::Diamonds final : public Suit
-	{
-	private:
-		void run(sf::RenderTarget&) const override;
-	};
-
-	class Suit::Clubs final : public Suit
-	{
-	private:
-		void run(sf::RenderTarget&) const override;
-	};
-
-	class Suit::Spades final : public Suit
 	{
 	private:
 		void run(sf::RenderTarget&) const override;
@@ -118,6 +75,9 @@ namespace Screen
 	{
 	public:
 		Deck(const ::Deck&);
+
+	private:
+		void run(sf::RenderTarget&) const override;
 
 	private:
 		const ::Deck& _deck;

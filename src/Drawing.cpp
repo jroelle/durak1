@@ -14,7 +14,8 @@ namespace
 	inline sf::Font loadFont(const std::string& fileName)
 	{
 		sf::Font font;
-		font.loadFromFile(fileName);
+		const bool result = font.loadFromFile(fileName);
+		font.setSmooth(false);
 		return font;
 	}
 
@@ -85,6 +86,92 @@ namespace
 				target.draw(points);
 			}
 		}
+	}
+
+	inline char getCardCharacter(const Card& card)
+	{
+		switch (card.GetSuit())
+		{
+		case Card::Suit::Hearts:
+			switch (card.GetRank())
+			{
+			case Card::Rank::Number6:	return 'S';
+			case Card::Rank::Number7:	return 'T';
+			case Card::Rank::Number8:	return 'U';
+			case Card::Rank::Number9:	return 'V';
+			case Card::Rank::Number10:	return 'W';
+			case Card::Rank::Jack:		return 'X';
+			case Card::Rank::Queen:		return 'Y';
+			case Card::Rank::King:		return 'Z';
+			case Card::Rank::Ace:		return 'N';
+			}
+			break;
+
+		case Card::Suit::Diamonds:
+			switch (card.GetRank())
+			{
+			case Card::Rank::Number6:	return 'F';
+			case Card::Rank::Number7:	return 'G';
+			case Card::Rank::Number8:	return 'H';
+			case Card::Rank::Number9:	return 'I';
+			case Card::Rank::Number10:	return 'J';
+			case Card::Rank::Jack:		return 'K';
+			case Card::Rank::Queen:		return 'L';
+			case Card::Rank::King:		return 'M';
+			case Card::Rank::Ace:		return 'A';
+			}
+			break;
+
+		case Card::Suit::Clubs:
+			switch (card.GetRank())
+			{
+			case Card::Rank::Number6:	return 's';
+			case Card::Rank::Number7:	return 't';
+			case Card::Rank::Number8:	return 'u';
+			case Card::Rank::Number9:	return 'v';
+			case Card::Rank::Number10:	return 'w';
+			case Card::Rank::Jack:		return 'x';
+			case Card::Rank::Queen:		return 'y';
+			case Card::Rank::King:		return 'z';
+			case Card::Rank::Ace:		return 'n';
+			}
+			break;
+
+		case Card::Suit::Spades:
+			switch (card.GetRank())
+			{
+			case Card::Rank::Number6:	return 'f';
+			case Card::Rank::Number7:	return 'g';
+			case Card::Rank::Number8:	return 'h';
+			case Card::Rank::Number9:	return 'i';
+			case Card::Rank::Number10:	return 'j';
+			case Card::Rank::Jack:		return 'k';
+			case Card::Rank::Queen:		return 'l';
+			case Card::Rank::King:		return 'm';
+			case Card::Rank::Ace:		return 'a';
+			}
+			break;
+		}
+		return '?';
+	}
+
+	inline std::optional<sf::FloatRect> getGlyphBounds(const sf::Font& font, unsigned int size)
+	{
+		constexpr char glyphCode = '?';
+		if (font.hasGlyph(glyphCode))
+		{
+			const auto& glyph = font.getGlyph(glyphCode, size, false);
+			return glyph.bounds;
+		}
+		return std::nullopt;
+	}
+
+	inline sf::Vector2f getPixelSize(const sf::RenderTarget& target)
+	{
+		sf::Vector2f pixelSize = target.mapPixelToCoords({ 1, 1 }) - target.mapPixelToCoords({ 0, 0 });
+		pixelSize.x = std::abs(pixelSize.x);
+		pixelSize.y = std::abs(pixelSize.y);
+		return pixelSize;
 	}
 
 	inline void rotateViewAt(sf::Vector2f coord, sf::View& view, float rotation)
@@ -168,10 +255,6 @@ namespace Screen
 	{
 		ViewGuard guard(target, *this);
 		run(target);
-		for (const auto& drawing : _children)
-		{
-			drawing->draw(target, states);
-		}
 
 		if constexpr (false)
 		{
@@ -189,12 +272,6 @@ namespace Screen
 		}
 	}
 
-	Drawing& Drawing::addChild(const std::shared_ptr<Drawing>& child)
-	{
-		_children.push_back(child);
-		return *_children.back();
-	}
-
 	void Table::run(sf::RenderTarget& target) const
 	{
 		sf::RectangleShape table(target.getView().getSize());
@@ -202,7 +279,17 @@ namespace Screen
 		target.draw(table);
 	}
 
-	sf::Font OpenCard::_font = loadFont("ds-kork3.ttf");
+	sf::Vector2f Card::getSize() const
+	{
+		const auto bounds = getGlyphBounds(getFont(), Size);
+		return bounds ? bounds->getSize() : sf::Vector2f{};
+	}
+
+	const sf::Font& Card::getFont() const
+	{
+		static sf::Font font = loadFont("CARDS.TTF"); // https://www.dafont.com/playing-cards.charmap
+		return font;
+	}
 
 	OpenCard::OpenCard(const ::Card& card)
 		: _card(card)
@@ -211,102 +298,41 @@ namespace Screen
 
 	void OpenCard::run(sf::RenderTarget& target) const
 	{
-		constexpr float textOffset = Width * 0.05f;
-		constexpr unsigned int textSize = static_cast<unsigned int>(Width / 2.5);
-		constexpr float suitOffset = textSize;
+		auto bounds = getGlyphBounds(getFont(), Size);
+		if (!bounds)
+			return;
 
-		drawBeveledRectangle(target, Color::LightGrayGreen, Color::DarkBrown, Width, Height, Bevel);
+		const auto pixelSize = getPixelSize(target);
+		bounds->width -= pixelSize.x;
+		bounds->height -= pixelSize.y;
+
+		sf::RectangleShape bg(bounds->getSize());
+		bg.setOrigin(0.5f * bg.getSize());
+		bg.setFillColor(Color::LightGrayGreen);
+		target.draw(bg);
 
 		sf::Text text;
-		text.setFont(_font);
-		text.setCharacterSize(static_cast<unsigned int>(Width / 2.5));
-		text.setPosition(-0.5f * Width + textOffset, -0.5f * Height + textOffset);
+		text.setFont(getFont());
+		text.setCharacterSize(Size);
 		text.setFillColor(Color::DarkBrown);
-
-		auto suit = Suit::create(_card.GetSuit());
-		suit->setOrigin(text.getPosition() + sf::Vector2f{ 0.f, suitOffset });
-
-		text.setString(getRank(_card.GetRank()));
-		target.draw(text);
-		target.draw(*suit);
-
-		text.setPosition(-text.getPosition());
-		text.rotate(180.f);
+		text.setString(getCardCharacter(_card));
+		text.setPosition(-0.61f * bounds->getSize().x, -0.24f * bounds->getSize().y);
 		target.draw(text);
 	}
 
 	void CloseCard::run(sf::RenderTarget& target) const
 	{
 		constexpr float patternStepCoeff = 0.1f;
-		constexpr float patternSizeCoeff = 0.95f;
+		constexpr float patternSizeCoeff = 0.85f;
 
-		drawBeveledRectangle(target, Color::DarkBrown, Color::LightGrayGreen, Width, Height, Bevel);
-		drawPointPattern(target, Color::LightGrayGreen, Width * patternSizeCoeff, Height * patternSizeCoeff, Width * patternStepCoeff);
-	}
+		sf::RectangleShape card(getSize() - 2.f * getPixelSize(target));
+		card.setOrigin(card.getSize() * 0.5f);
+		card.setFillColor(Color::DarkBrown);
+		card.setOutlineColor(Color::LightGrayGreen);
+		card.setOutlineThickness(getPixelSize(target).x);
+		target.draw(card);
 
-	std::shared_ptr<Suit> Screen::Suit::create(::Card::Suit suit)
-	{
-		switch (suit)
-		{
-		case ::Card::Suit::Hearts:		return std::make_shared<Suit::Hearts>();
-		case ::Card::Suit::Diamonds:	return std::make_shared<Suit::Diamonds>();
-		case ::Card::Suit::Clubs:		return std::make_shared<Suit::Clubs>();
-		case ::Card::Suit::Spades:		return std::make_shared<Suit::Spades>();
-		}
-		return nullptr;
-	}
-
-	void Suit::Hearts::run(sf::RenderTarget& target) const
-	{
-		constexpr float width = Size;
-		constexpr float height = width * 1.5f;
-
-		sf::CircleShape circle(0.5f * width, 8);
-		circle.setFillColor(Color::DarkBrown);
-
-		circle.setPosition(-0.5f * circle.getRadius(), 0.f);
-		target.draw(circle);
-
-		circle.setPosition(0.5f * circle.getRadius(), 0.f);
-		target.draw(circle);
-
-		const float triangleHeight = height - circle.getRadius();
-		const float tg = circle.getRadius() / triangleHeight;
-		const float angleRad = std::numbers::pi_v<float> - 2.f * std::atan(tg);
-		const float offsetX = triangleHeight * std::cos(angleRad);
-		const float offsetY = triangleHeight * std::sin(angleRad);
-
-		sf::VertexArray triangle(sf::PrimitiveType::TrianglesStrip, 4);
-		setColor(triangle, Color::DarkBrown);
-		triangle[0].position = { -offsetX, triangleHeight - offsetY };
-		triangle[1].position = { 0.f, 0.f };
-		triangle[2].position = { 0.f, triangleHeight };
-		triangle[3].position = { offsetX, triangleHeight - offsetY };
-		target.draw(triangle);
-	}
-
-	void Suit::Diamonds::run(sf::RenderTarget& target) const
-	{
-		constexpr float width = Size;
-		constexpr float height = width * 1.5f;
-
-		sf::VertexArray points(sf::PrimitiveType::TriangleFan, 4);
-		setColor(points, Color::DarkBrown);
-		points[0].position = { -0.5f * width, 0.f };
-		points[1].position = { 0.f, 0.5f * height };
-		points[2].position = { 0.5f * width, 0.f };
-		points[3].position = { 0.f, -0.5f * height };
-		target.draw(points);
-	}
-
-	void Suit::Clubs::run(sf::RenderTarget& target) const
-	{
-		// TODO
-	}
-
-	void Suit::Spades::run(sf::RenderTarget& target) const
-	{
-		// TODO
+		drawPointPattern(target, Color::LightGrayGreen, card.getSize().x * patternSizeCoeff, card.getSize().y * patternSizeCoeff, card.getSize().x * patternStepCoeff);
 	}
 
 	void SkipButton::run(sf::RenderTarget& target) const
@@ -345,31 +371,33 @@ namespace Screen
 	Deck::Deck(const ::Deck& deck)
 		: _deck(deck)
 	{
+	}
+
+	void Deck::run(sf::RenderTarget& target) const
+	{
 		if (auto lastCard = _deck.GetLast())
 		{
-			auto child = std::make_shared<Screen::Drawing>();
-			child->rotate(90.f);
+			Screen::OpenCard openCard(*lastCard);
+			openCard.setOrigin(0.f, -0.5f * openCard.getSize().x);
 
-			auto openCard = std::make_shared<Screen::OpenCard>(*lastCard);
-			openCard->setOrigin(0.f, -0.5f * Card::Width);
-			child->addChild(openCard);
+			Holder base(std::move(openCard));
+			base.rotate(90.f);
 
-			addChild(child);
+			target.draw(base);
 		}
 		if (_deck.GetCount() > 1)
 		{
-			constexpr float deckHeightCoeff = 1.f;
-			const float deckHeight = static_cast<float>(_deck.GetCount());
+			constexpr float deckHeightCoeff = 0.5f;
+			const float deckHeight = static_cast<float>(_deck.GetCount()) * deckHeightCoeff;
 
-			auto cards = createBeveledRectangle(true, Color::LightGrayGreen, Card::Width, Card::Height, Card::Bevel);
-			addChild(std::make_shared<Holder<sf::VertexArray>>(std::move(cards)));
+			CloseCard firstCard;
+			firstCard.setOrigin(0.f, -deckHeight);
 
-			cards = createBeveledRectangle(false, Color::LightGrayGreen, Card::Width, Card::Height, Card::Bevel);
-			addChild(std::make_shared<Holder<sf::VertexArray>>(std::move(cards)));
-
-			auto firstCard = std::make_shared<Screen::CloseCard>();
-			firstCard->setOrigin(0.f, -deckHeight);
-			addChild(firstCard);
+			sf::RectangleShape deck({ firstCard.getSize().x, firstCard.getSize().y + deckHeight });
+			deck.setOrigin(0.5f * deck.getSize());
+			deck.setFillColor(Color::LightGrayGreen);
+			target.draw(deck);
+			target.draw(firstCard);
 		}
 	}
 }

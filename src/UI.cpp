@@ -66,7 +66,7 @@ struct UI::Data
 };
 
 UI::UI(const std::string& title, unsigned int width, unsigned int height)
-	: _window(sf::VideoMode{ width, height }, sf::String(title))
+	: _window(sf::VideoMode{ width, height }, sf::String(title), sf::Style::Close)
 	, _data(std::make_unique<Data>())
 {
 }
@@ -107,14 +107,14 @@ void UI::Update(const Context& context, double msDelta)
 
 	{
 		Screen::Deck deck(context.GetDeck());
-		deck.setOrigin(size.x - 0.6f * Screen::Card::Width, 0.5f * size.y);
+		deck.setOrigin(0.9f * size.x, 0.5f * size.y);
 		_window.draw(deck);
 	}
 
 	if (_data->flags & Data::Flag::PickingCard)
 	{
 		Screen::SkipButton skipButton;
-		skipButton.setOrigin(0.5f * size.x, size.y - Screen::Card::Height);
+		skipButton.setOrigin(0.5f * size.x, size.y - Screen::Card{}.getSize().y);
 		_window.draw(skipButton);
 	}
 
@@ -155,6 +155,11 @@ bool UI::HandleEvent(const sf::Event& event)
 	}
 
 	return false;
+}
+
+bool UI::IsLocked() const
+{
+	return _data && !_data->animation.IsEmpty();
 }
 
 void UI::OnRoundStart(const Round& round)

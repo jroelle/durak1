@@ -26,6 +26,7 @@ public:
 	bool NeedsToUpdate() const;
 	void Update(const Context&, double msDelta);
 	bool HandleEvent(const sf::Event&);
+	bool IsLocked() const;
 
 	void OnRoundStart(const Round&);
 	void OnPlayerAttack(const Player& attacker, const Card& attackCard);

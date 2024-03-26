@@ -32,7 +32,7 @@ namespace
 		if (auto ui = context->GetUI())
 		{
 			auto& window = ui->GetWindow();
-			//window.setFramerateLimit(framerate);
+			window.setFramerateLimit(framerate);
 			window.setActive(true);
 		}
 
@@ -47,7 +47,7 @@ namespace
 				clock.restart();
 				ui->GetWindow().display();
 			}
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000 / framerate));
+			//std::this_thread::sleep_for(std::chrono::milliseconds(1000 / framerate));
 		}
 	}
 
