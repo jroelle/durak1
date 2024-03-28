@@ -27,6 +27,12 @@ namespace
 		return n;
 	}
 
+	inline bool isPointInRectange(const sf::Vector2f& origin, float width, float height, const sf::Vector2f& point, float offset = 0.f)
+	{
+		return origin.x - 0.5f * width - offset < point.x && point.x < origin.x + 0.5f * width + offset
+			&& origin.y - 0.5f * height - offset < point.y && point.y < origin.y + 0.5f * height + offset;
+	}
+
 	class ViewRestorer
 	{
 	public:
@@ -229,7 +235,10 @@ void UI::Update(const Context& context, sf::Int32 msDelta)
 		return;
 
 	Mutex::Guard guard(Mutex::Get());
+
+	constexpr float interactOffset = 2.5f;
 	const auto size = _window.getView().getSize();
+	sf::Cursor::Type cursorType = sf::Cursor::Arrow;
 
 	{
 		Screen::Table table;
@@ -245,8 +254,11 @@ void UI::Update(const Context& context, sf::Int32 msDelta)
 	if (_data->flags & Data::Flag::PickingCard)
 	{
 		Screen::SkipButton skipButton;
-		skipButton.setOrigin(0.5f * size.x, size.y - Screen::Card{}.getSize().y);
+		const sf::Vector2f center(0.5f * size.x, size.y - Screen::Card{}.getSize().y);
+		skipButton.setOrigin(center);
 		_window.draw(skipButton);
+		if (isPointInRectange(center, Screen::SkipButton::Size, Screen::SkipButton::Size, _data->cursorPosition, interactOffset))
+			cursorType = sf::Cursor::Hand;
 	}
 
 	bool finished = true;
@@ -257,6 +269,14 @@ void UI::Update(const Context& context, sf::Int32 msDelta)
 
 	if (finished)
 		_data->flags &= ~Data::Flag::NeedRedraw;
+
+	if (_cursorType != cursorType)
+	{
+		_cursorType = cursorType;
+		sf::Cursor cursor;
+		cursor.loadFromSystem(cursorType);
+		_window.setMouseCursor(cursor);
+	}
 }
 
 bool UI::HandleEvent(const sf::Event& event)

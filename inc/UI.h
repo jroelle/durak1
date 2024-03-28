@@ -2,6 +2,7 @@
 #include <memory>
 #include <optional>
 #include <SFML/Graphics.hpp>
+#include <SFML/Window/Cursor.hpp>
 #include "Card.h"
 
 namespace sf
@@ -52,5 +53,6 @@ private:
 	struct Data;
 
 	sf::RenderWindow _window;
+	sf::Cursor::Type _cursorType = sf::Cursor::Arrow;
 	std::unique_ptr<Data> _data;
 };
