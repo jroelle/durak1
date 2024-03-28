@@ -1,13 +1,24 @@
 #include "Context.h"
-#include <set>
 #include "Player.h"
+#include "UI.h"
 
 Context::Context(std::weak_ptr<UI> ui, size_t botsNumber)
 	: _players(botsNumber)
 	, _ui(ui)
 {
 	_trumpSuit = _deck.GetLast()->GetSuit();
-	_players.DrawCards(_deck, _players.GetUser());
+
+	Player* start = _players.GetUser();
+	_players.DrawCards(_deck, start);
+
+	if (auto ui = _ui.lock())
+	{
+		_players.ForEach([&ui, this](const Player* player)
+			{
+				ui->OnPlayerDrawCards(*player, _deck);
+				return false;
+			}, start);
+	}
 }
 
 Deck& Context::GetDeck()

@@ -134,6 +134,13 @@ namespace utility
 			return _root ? _root->value() : nullptr;
 		}
 
+		template<typename K>
+		T* find(const K& key) const
+		{
+			auto iter = _storage.find(key);
+			return iter != _storage.end() ? iter->value() : nullptr;
+		}
+
 	private:
 		T* push(element&& tmp)
 		{

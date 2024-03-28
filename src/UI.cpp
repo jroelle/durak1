@@ -1,6 +1,7 @@
 #include "UI.h"
-#include <array>
+#include <queue>
 #include <SFML/Graphics/RenderWindow.hpp>
+#include "Utility.hpp"
 #include "Drawing.h"
 #include "Color.h"
 #include "Hand.h"
@@ -64,8 +65,11 @@ namespace
 
 	struct Animation
 	{
+		using OnFinish = std::function<void()>;
+
 		State finalState;
 		State speedMs;
+		OnFinish onFinish;
 	};
 
 	class VisibleCard final
@@ -89,21 +93,21 @@ namespace
 			else
 				screenCard = std::make_unique<Screen::CloseCard>();
 
-			if (_animation)
+			if (!_animations.empty())
 			{
-				if (_animation->finalState == _state)
+				if (_animations.front().finalState == _state)
+					_animations.pop();
+
+				if (!_animations.empty())
 				{
-					_animation.reset();
-				}
-				else
-				{
-					sf::Vector2f dir = _animation->finalState.position - _state.position;
+					const auto& animation = _animations.front();
+					sf::Vector2f dir = animation.finalState.position - _state.position;
 					dir /= std::hypot(dir.x, dir.y);
-					dir.x *= static_cast<float>(msDelta) * _animation->speedMs.position.x;
-					dir.y *= static_cast<float>(msDelta) * _animation->speedMs.position.y;
+					dir.x *= static_cast<float>(msDelta) * animation.speedMs.position.x;
+					dir.y *= static_cast<float>(msDelta) * animation.speedMs.position.y;
 
 					_state.position += dir;
-					_state.angleDegree += static_cast<float>(msDelta) * _animation->speedMs.angleDegree;
+					_state.angleDegree += static_cast<float>(msDelta) * animation.speedMs.angleDegree;
 				}
 			}
 
@@ -111,12 +115,12 @@ namespace
 			screenCard->setRotation(_state.angleDegree);
 			target.draw(*screenCard);
 
-			return !_animation;
+			return _animations.empty();
 		}
 
 		void StartAnimation(const Animation& animation)
 		{
-			_animation = animation;
+			_animations.push(animation);
 		}
 
 		const State& GetState() const
@@ -124,65 +128,82 @@ namespace
 			return _state;
 		}
 
+		const ::Card& GetCardInfo() const
+		{
+			return _cardInfo;
+		}
+
 	private:
 		::Card _cardInfo;
 		State _state;
-		std::optional<Animation> _animation;
+		std::queue<Animation> _animations;
 		bool _open = false;
 	};
 
-	class VisibleCards final
+	class VisibleCards
 	{
 	public:
-		void StartAnimation(const ::Card& card, const Animation& animation)
+		virtual ~VisibleCards() = default;
+
+		void StartAnimation(const ::Card& cardInfo, const Animation& animation)
 		{
-			auto iter = _map.find(card);
-			if (iter != _map.end())
-				iter->second.StartAnimation(animation);
+			if (auto* visibleCard = _list.find(cardInfo))
+				visibleCard->StartAnimation(animation);
 		}
 
 		bool Draw(sf::Int32 msDelta, sf::RenderTarget& target)
 		{
 			bool res = true;
-			for (auto& [cardInfo, visibleCard] : _map)
-				res = visibleCard.Draw(msDelta, target) && res;
+			_list.for_each([&res, msDelta, &target](VisibleCard* visibleCard)
+				{
+					res = visibleCard->Draw(msDelta, target) && res;
+					return false;
+				});
 			return res;
 		}
 
 		size_t GetCount() const
 		{
-			return _map.size();
+			return _list.size();
 		}
 
-		State GetState(const ::Card& card) const
+		State GetState(const ::Card& cardInfo) const
 		{
-			auto iter = _map.find(card);
-			if (iter != _map.end())
-				return iter->second.GetState();
+			if (const auto* visibleCard = _list.find(cardInfo))
+				return visibleCard->GetState();
 			return {};
 		}
 
 	private:
-		struct CardHash
+		struct Hash
 		{
-			size_t operator()(const Card& card) const
+			size_t operator()(const ::Card& card) const
 			{
 				size_t result = static_cast<size_t>(card.GetSuit()) << 8;
 				result += static_cast<size_t>(card.GetRank());
 				return result;
 			}
+
+			size_t operator()(const VisibleCard& visibleCard) const
+			{
+				return operator()(visibleCard.GetCardInfo());
+			}
 		};
 
-		struct CardsEqual
+		struct Equal
 		{
-			bool operator()(const Card& a, const Card& b) const
+			bool operator()(const ::Card& a, const ::Card& b) const
 			{
 				return a == b;
 			}
+			bool operator()(const VisibleCard& a, const VisibleCard& b) const
+			{
+				return operator()(a.GetCardInfo(), b.GetCardInfo());
+			}
 		};
-		using Map = std::unordered_map<::Card, VisibleCard, CardHash, CardsEqual>;
 
-		Map _map;
+		using List = utility::loop_list<VisibleCard, Hash, Equal>;
+		List _list;
 	};
 }
 
@@ -331,11 +352,20 @@ void UI::OnPlayerDefend(const Player& defender, const Card& attackCard, const Ca
 void UI::OnRoundEnd(const Round& round)
 {
 	_data->flags |= Data::Flag::NeedRedraw;
+
+	// remove cards from the table
 }
 
 void UI::OnPlayerDrawCards(const Player& player, const Deck& deck)
 {
 	_data->flags |= Data::Flag::NeedRedraw;
+
+	auto iter = _data->playerCards.find(player.GetId());
+	if (iter != _data->playerCards.end())
+	{
+		auto& cards = iter->second;
+		cards.StartAnimation();
+	}
 }
 
 void UI::OnPlayerDrawCards(const Player& player, const Round& round)

@@ -46,13 +46,13 @@ std::unique_ptr<Round> Round::Run()
 
 		if (attackCard)
 		{
-			_cards.emplace_back(*attackCard);
+			_cards.push_back(*attackCard);
 			if (ui)
 				ui->OnPlayerAttack(*attackerPickedCard, *attackCard);
 
 			if (const auto defendCard = defender->Defend(*_context, *attackCard))
 			{
-				_cards.emplace_back(*defendCard);
+				_cards.push_back(*defendCard);
 				if (ui)
 					ui->OnPlayerDefend(*attackerPickedCard, *attackCard, *defendCard);
 			}
@@ -61,6 +61,7 @@ std::unique_ptr<Round> Round::Run()
 				defender->AddCards(_cards.begin(), _cards.end());
 				if (ui)
 					ui->OnPlayerDrawCards(*defender, *this);
+				_cards.clear();
 				break;
 			}
 		}
