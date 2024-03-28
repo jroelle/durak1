@@ -32,8 +32,8 @@ std::unique_ptr<Round> Round::Run()
 		ui->OnRoundStart(*this);
 
 	_cards = {};
-	_cards.reserve(Hand::MinCount * 2);
-	for (size_t attackIndex = 0; attackIndex < Hand::MinCount; ++attackIndex)
+	_cards.reserve(MaxAttacksCount * 2);
+	for (size_t attackIndex = 0; attackIndex < MaxAttacksCount; ++attackIndex)
 	{
 		std::optional<Card> attackCard;
 		Player* attackerPickedCard = nullptr;

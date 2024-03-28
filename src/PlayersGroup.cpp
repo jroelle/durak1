@@ -3,20 +3,12 @@
 #include "User.h"
 #include "Bot.h"
 
-namespace
-{
-	inline bool equal(const Player* a, const Player* b)
-	{
-		using element = utility::loop_list<Player>::element;
-		return element::hash{}(const_cast<Player*>(a)) == element::hash{}(const_cast<Player*>(b));
-	}
-}
-
 PlayersGroup::PlayersGroup(size_t botsNumber)
 {
-	_user = _playerLoop.push(PlayerLoop::element::make_holder<User>());
+	Player::Id id = 0;
+	_user = _playerLoop.push(PlayerLoop::element::make_holder<User>(id++));
 	for (size_t i = 0; i < botsNumber; ++i)
-		_playerLoop.push(PlayerLoop::element::make_holder<User>());
+		_playerLoop.push(PlayerLoop::element::make_holder<Bot>(id++));
 }
 
 PlayersGroup::~PlayersGroup()
@@ -34,7 +26,7 @@ void PlayersGroup::DrawCards(Deck& deck, Player* start)
 
 Player* PlayersGroup::Next(const Player* player) const
 {
-	return player ? _playerLoop.next(const_cast<Player*>(player)) : nullptr;
+	return player ? _playerLoop.next(player) : nullptr;
 }
 
 Player* PlayersGroup::GetUser() const
@@ -54,32 +46,35 @@ Player* PlayersGroup::GetDefender(const Player* attacker) const
 
 void PlayersGroup::RemoveIf(const RemoveIfCallback& removeIf)
 {
-	std::vector<Player*> playersToRemove;
+	std::vector<const Player*> playersToRemove;
 	playersToRemove.reserve(GetCount());
 
-	_playerLoop.for_each([&removeIf, &playersToRemove](Player* player)
+	_playerLoop.for_each([&removeIf, &playersToRemove](const Player* player)
 		{
 			if (removeIf(player))
 				playersToRemove.push_back(player);
 			return false;
 		});
 
-	for (auto* player : playersToRemove)
+	for (const auto* player : playersToRemove)
 		_playerLoop.erase(player);
 }
 
 bool PlayersGroup::ForEach(const ForEachCallback& callback, const Player* start) const
 {
-	return _playerLoop.for_each(start ? const_cast<Player*>(start) : GetUser(), callback);
+	return _playerLoop.for_each(start ? start : GetUser(), callback);
 }
 
 bool PlayersGroup::ForEachIdlePlayer(const ForEachCallback& callback, const Player* attacker) const
 {
+	if (!attacker)
+		return false;
+
 	bool result = false;
 	_playerLoop.for_each(Next(GetDefender(attacker)), [&](Player* player)
 		{
 			result = callback(player);
-			return result || equal(attacker, player);
+			return result || Equal{}(*attacker, *player);
 		});
 	return result;
 }
@@ -91,11 +86,14 @@ bool PlayersGroup::ForEachAttackPlayer(const ForEachCallback& callback, const Pl
 
 bool PlayersGroup::ForEachOtherPlayer(const ForEachCallback& callback, const Player* exclude, const Player* start) const
 {
-	if (start)
+	if (!start)
+		start = GetUser();
+
+	if (exclude)
 	{
-		return _playerLoop.for_each(const_cast<Player*>(start), [&](Player* player)
+		return _playerLoop.for_each(start, [&](Player* player)
 			{
-				if (equal(exclude, player))
+				if (Equal{}(*exclude, *player))
 					return false;
 
 				return callback(player);

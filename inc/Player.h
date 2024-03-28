@@ -9,6 +9,9 @@ class Context;
 class Player
 {
 public:
+	using Id = uint8_t;
+
+	Player(Id);
 	virtual ~Player() = default;
 
 	std::optional<Card> Attack(const Context&);
@@ -18,6 +21,7 @@ public:
 	std::optional<Card> FindLowestTrumpCard(Card::Suit) const;
 	size_t GetCardCount() const;
 	bool HasAnyCards() const;
+	Id GetId() const;
 
 	template<typename T>
 	Player& AddCards(T&& begin, T&& end)
@@ -40,4 +44,5 @@ private:
 
 private:
 	Hand _hand;
+	Id _id = 0;
 };

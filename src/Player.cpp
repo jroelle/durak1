@@ -2,6 +2,10 @@
 #include "Deck.h"
 #include "Context.h"
 
+Player::Player(Id id)
+	: _id(id)
+{}
+
 std::optional<Card> Player::Attack(const Context& context)
 {
 	const auto attackCard = pickAttackCard(context);
@@ -44,6 +48,11 @@ size_t Player::GetCardCount() const
 bool Player::HasAnyCards() const
 {
 	return !_hand.IsEmpty();
+}
+
+Player::Id Player::GetId() const
+{
+	return _id;
 }
 
 void Player::removeCard(const std::optional<Card>& card)

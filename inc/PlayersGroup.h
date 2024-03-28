@@ -28,7 +28,15 @@ public:
 	bool ForEachOtherPlayer(const ForEachCallback&, const Player* exclude, const Player* start = nullptr) const;
 
 private:
-	using PlayerLoop = utility::loop_list<Player>;
+	struct Hash
+	{
+		size_t operator()(const Player& player) const { return std::hash<Player::Id>{}(player.GetId()); }
+	};
+	struct Equal
+	{
+		bool operator()(const Player& a, const Player& b) const { return std::equal_to<Player::Id>{}(a.GetId(), b.GetId()); }
+	};
+	using PlayerLoop = utility::loop_list<Player, Hash, Equal>;
 
 	PlayerLoop _playerLoop;
 	Player* _user = nullptr;

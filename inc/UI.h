@@ -2,6 +2,7 @@
 #include <memory>
 #include <optional>
 #include <SFML/Graphics.hpp>
+#include "Card.h"
 
 namespace sf
 {
@@ -12,7 +13,6 @@ class Round;
 class Player;
 class Deck;
 class Context;
-class Card;
 class User;
 
 class UI
@@ -24,7 +24,7 @@ public:
 	sf::RenderWindow& GetWindow();
 	const sf::RenderWindow& GetWindow() const;
 	bool NeedsToUpdate() const;
-	void Update(const Context&, double msDelta);
+	void Update(const Context&, sf::Int32 msDelta);
 	bool HandleEvent(const sf::Event&);
 	bool IsLocked() const;
 
@@ -44,6 +44,9 @@ public:
 private:
 	sf::Vector2f toModel(const sf::Vector2i&) const;
 	sf::Vector2i toScreen(const sf::Vector2f&) const;
+
+	sf::Vector2f findRoundCardPlace(const std::optional<Card>& attackCard = {}) const;
+	void onPlayerPlaceCard(const Player& player, const Card& attackCard, const std::optional<Card>& defendCard = {});
 
 private:
 	struct Data;

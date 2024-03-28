@@ -10,6 +10,7 @@ class Round
 {
 public:
 	using Cards = std::vector<Card>;
+	static constexpr size_t MaxAttacksCount = Hand::MinCount;
 
 	Round() = delete;
 	Round(const Round&) = delete;

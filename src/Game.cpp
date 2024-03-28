@@ -43,8 +43,7 @@ namespace
 			if (ui && ui->NeedsToUpdate())
 			{
 				ui->GetWindow().clear();
-				ui->Update(*context, clock.getElapsedTime().asMilliseconds());
-				clock.restart();
+				ui->Update(*context, clock.restart().asMilliseconds());
 				ui->GetWindow().display();
 			}
 			//std::this_thread::sleep_for(std::chrono::milliseconds(1000 / framerate));
