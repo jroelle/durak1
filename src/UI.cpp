@@ -226,8 +226,8 @@ namespace
 		}
 
 	private:
-		virtual void onCardAdded(const VisibleCard&) {}
-		virtual void onCardRemoved(const VisibleCard&) {}
+		virtual void onCardAdded(VisibleCard&) {}
+		virtual void onCardRemoved(VisibleCard&) {}
 		virtual State getNewCardState() const = 0;
 
 	protected:
@@ -292,7 +292,7 @@ namespace
 		}
 	};
 
-	class PlayerCards final : public VisibleCards
+	class PlayerCards : public VisibleCards
 	{
 	public:
 		PlayerCards(const sf::View& view, const sf::Vector2f& position, const sf::Vector2f& faceDirection)
@@ -300,6 +300,8 @@ namespace
 			, _position(position)
 			, _faceDirection(faceDirection)
 		{}
+
+		virtual ~PlayerCards() = default;
 
 		void ShowCard(const Card& cardInfo)
 		{
@@ -318,8 +320,9 @@ namespace
 		}
 
 	private:
-		void onCardAdded(const VisibleCard& cardAdded) override
+		void onCardAdded(VisibleCard& cardAdded) override
 		{
+			cardAdded.SetOpen(false);
 			_cards.for_each([&](VisibleCard& visibleCard)
 				{
 					if (visibleCard.GetCardInfo() != cardAdded.GetCardInfo())
@@ -332,9 +335,9 @@ namespace
 				});
 		}
 
-		void onCardRemoved(const VisibleCard& cardRemoved) override
+		void onCardRemoved(VisibleCard& cardRemoved) override
 		{
-
+			cardRemoved.SetOpen(true);
 		}
 
 		State getNewCardState() const override
@@ -350,22 +353,34 @@ namespace
 		sf::Vector2f _faceDirection;
 	};
 
+	class UserCards final : public PlayerCards
+	{
+	public:
+		using PlayerCards::PlayerCards;
+
+	private:
+		void onCardAdded(VisibleCard& cardAdded) override
+		{
+			cardAdded.SetOpen(true);
+		}
+	};
+
 	class Players
 	{
 	public:
 		Players(const sf::View& view, size_t botsNumber)
 		{
 			_players.reserve(botsNumber + 1);
-			_players.emplace_back(view, sf::Vector2f{ 0.5f * view.getSize().x, view.getSize().y }, sf::Vector2f{ 0.f, -1.f });
+			_players.push_back(std::make_unique<UserCards>(view, sf::Vector2f{ 0.5f * view.getSize().x, view.getSize().y }, sf::Vector2f{ 0.f, -1.f }));
 
 			switch (botsNumber)
 			{
 			case 2:
-				_players.emplace_back(view, sf::Vector2f{ 0.f, 0.5f * view.getSize().y }, sf::Vector2f{ 1.f, 0.f });
+				_players.push_back(std::make_unique<PlayerCards>(view, sf::Vector2f{ 0.f, 0.5f * view.getSize().y }, sf::Vector2f{ 1.f, 0.f }));
 				[[fallthrough]];
 
 			case 1:
-				_players.emplace_back(view, sf::Vector2f{ 0.5f * view.getSize().x, 0.f }, sf::Vector2f{ 0.f, 1.f });
+				_players.push_back(std::make_unique<PlayerCards>(view, sf::Vector2f{ 0.5f * view.getSize().x, 0.f }, sf::Vector2f{ 0.f, 1.f }));
 				break;
 			// TODO
 			}
@@ -378,25 +393,25 @@ namespace
 
 		PlayerCards& GetCards(Player::Id id)
 		{
-			return _players[id];
+			return *_players[id];
 		}
 
 		const PlayerCards& GetCards(Player::Id id) const
 		{
-			return _players[id];
+			return *_players[id];
 		}
 
 		bool Draw(sf::Int32 msDelta, sf::RenderTarget& target)
 		{
 			bool res = true;
 			for (auto& player : _players)
-				res = player.Draw(msDelta, target) && res;
+				res = player->Draw(msDelta, target) && res;
 			return res;
 		}
 
 	private:
-		using Index = ::Player::Id;
-		std::vector<PlayerCards> _players;
+		using Index = Player::Id;
+		std::vector<std::unique_ptr<PlayerCards>> _players;
 	};
 }
 
