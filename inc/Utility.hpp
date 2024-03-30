@@ -5,7 +5,7 @@
 
 namespace utility
 {
-	template<typename T, typename H = std::hash<T>, typename E = std::equal_to<T>>
+	template<typename T, typename H = std::hash<T>>
 	class list_element final
 	{
 	public:
@@ -46,31 +46,37 @@ namespace utility
 		{
 			using is_transparent = void;
 
-			size_t operator()(const T& p) const { return H{}(p); }
-			size_t operator()(const list_element& e) const { return operator()(*e.value()); }
+			size_t operator()(size_t h) const { return h; }
+			size_t operator()(const T& v) const { return H{}(v); }
+			size_t operator()(const list_element& e) const { return H{}(*e.value()); }
 		};
 		struct transparent_equal
 		{
 			using is_transparent = void;
 
-			bool operator()(const T& a, const T& b) const { return E{}(a, b); }
-			bool operator()(const list_element& a, const list_element& b) const { return operator()(*a.value(), *b.value()); }
+			bool operator()(size_t a, size_t b) const { return a == b; }
+			bool operator()(size_t a, const T& b) const { return operator()(a, transparent_hash{}(b)); }
+			bool operator()(size_t a, const list_element& b) const { return operator()(a, transparent_hash{}(b)); }
+			bool operator()(const T& a, size_t b) const { return operator()(transparent_hash{}(a), b); }
+			bool operator()(const T& a, const T& b) const { return operator()(transparent_hash{}(a), transparent_hash{}(b)); }
 			bool operator()(const T& a, const list_element& b) const { return operator()(a, *b.value()); }
+			bool operator()(const list_element& a, size_t b) const { return operator()(transparent_hash{}(a), b); }
 			bool operator()(const list_element& a, const T& b) const { return operator()(*a.value(), b); }
+			bool operator()(const list_element& a, const list_element& b) const { return operator()(*a.value(), *b.value()); }
 		};
 
 	private:
 		holder _holder = {};
 		list_element* _next = nullptr;
 
-		template<typename T, typename H, typename E> friend class loop_list;
+		template<typename T, typename H> friend class loop_list;
 	};
 
-	template<typename T, typename H = std::hash<T>, typename E = std::equal_to<T>>
+	template<typename T, typename H = std::hash<T>>
 	class loop_list final
 	{
 	public:
-		using element = list_element<T, H, E>;
+		using element = list_element<T, H>;
 		using storage = std::unordered_set<element, typename element::transparent_hash, typename element::transparent_equal>;
 
 		size_t size() const noexcept
@@ -147,7 +153,7 @@ namespace utility
 		template<typename K>
 		T* find(const K& key) const
 		{
-			auto iter = _storage.find(key);
+			auto iter = _storage.find(H{}(key));
 			return iter != _storage.end() ? const_cast<T*>(iter->value()) : nullptr;
 		}
 
@@ -159,7 +165,7 @@ namespace utility
 		template<typename K>
 		bool contains(const K& key) const
 		{
-			return _storage.contains(key);
+			return _storage.contains(H{}(key));
 		}
 
 	private:

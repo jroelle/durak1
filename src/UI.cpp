@@ -240,19 +240,7 @@ namespace
 			}
 		};
 
-		struct Equal
-		{
-			bool operator()(const ::Card& a, const ::Card& b) const
-			{
-				return a == b;
-			}
-			bool operator()(const VisibleCard& a, const VisibleCard& b) const
-			{
-				return operator()(a.GetCardInfo(), b.GetCardInfo());
-			}
-		};
-
-		using List = utility::loop_list<VisibleCard, Hash, Equal>;
+		using List = utility::loop_list<VisibleCard, Hash>;
 		List _list;
 		const sf::View _view;
 	};
@@ -272,7 +260,7 @@ namespace
 	private:
 		State getNewCardState() const override
 		{
-			const size_t roundCardCount = _list.size();
+			const size_t roundCardCount = /*_list.size();*/ 0;
 			if (roundCardCount >= Round::MaxAttacksCount * 2)
 				return {};
 
@@ -325,7 +313,7 @@ namespace
 
 		State getNewCardState() const override
 		{
-
+			return {};
 		}
 
 	private:

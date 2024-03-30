@@ -74,7 +74,7 @@ bool PlayersGroup::ForEachIdlePlayer(const ForEachCallback& callback, const Play
 	_playerLoop.for_each(Next(GetDefender(attacker)), [&](Player* player)
 		{
 			result = callback(player);
-			return result || Equal{}(*attacker, *player);
+			return result || attacker->GetId() == player->GetId();
 		});
 	return result;
 }
@@ -93,7 +93,7 @@ bool PlayersGroup::ForEachOtherPlayer(const ForEachCallback& callback, const Pla
 	{
 		return _playerLoop.for_each(start, [&](Player* player)
 			{
-				if (Equal{}(*exclude, *player))
+				if (exclude->GetId() == player->GetId())
 					return false;
 
 				return callback(player);
