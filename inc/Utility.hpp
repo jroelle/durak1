@@ -1,6 +1,8 @@
 #pragma once
 #include <utility>
 #include <unordered_set>
+#include <unordered_map>
+#include <list>
 #include <memory>
 
 namespace utility
@@ -253,5 +255,123 @@ namespace utility
 	private:
 		element* _root = nullptr;
 		storage _storage;
+	};
+
+	template<typename KeyT, typename ValueT, typename H = std::hash<KeyT>>
+	class mapped_list final
+	{
+	public:
+		using storage = std::list<ValueT>;
+		using keys = std::unordered_map<KeyT, typename storage::iterator, H>;
+
+		size_t size() const
+		{
+			return _storage.size();
+		}
+
+		ValueT& at(const KeyT& key)
+		{
+			return *_keys.at(key);
+		}
+
+		const ValueT& at(const KeyT& key) const
+		{
+			return *_keys.at(key);
+		}
+
+		template<typename... Args>
+		ValueT& emplace_back(KeyT&& key, Args&&... args)
+		{
+			ValueT& elem = _storage.emplace_back(std::forward<Args>(args)...);
+			add_key(std::move(key), std::prev(_storage.end()));
+			return elem;
+		}
+
+		template<typename... Args>
+		ValueT& emplace_front(KeyT&& key, Args&&... args)
+		{
+			ValueT& elem = _storage.emplace_front(std::forward<Args>(args)...);
+			add_key(std::move(key), _storage.begin());
+			return elem;
+		}
+
+		void push_back(const KeyT& key, const ValueT& value)
+		{
+			_storage.push_back(value);
+			add_key(key, std::prev(_storage.end()));
+		}
+
+		void push_back(const KeyT& key, ValueT&& value)
+		{
+			_storage.push_back(std::move(value));
+			add_key(key, std::prev(_storage.end()));
+		}
+
+		void push_front(const KeyT& key, const ValueT& value)
+		{
+			_storage.push_front(value);
+			add_key(key, _storage.begin());
+		}
+
+		void push_front(const KeyT& key, ValueT&& value)
+		{
+			_storage.push_front(std::move(value));
+			add_key(key, _storage.begin());
+		}
+
+		ValueT remove(const KeyT& key)
+		{
+			const auto key_iter = _keys.find(key);
+			const auto storage_iter = key_iter->second;
+			ValueT value = std::move(*storage_iter);
+			_storage.erase(storage_iter);
+			_keys.erase(key_iter);
+			return value;
+		}
+
+		void erase(const KeyT& key)
+		{
+			const auto key_iter = _keys.find(key);
+			const auto storage_iter = key_iter->second;
+			_storage.erase(storage_iter);
+			_keys.erase(key_iter);
+		}
+
+		template<typename F>
+		bool for_each(const F& callback)
+		{
+			for (auto& elem : _storage)
+			{
+				if (callback(elem))
+					return true;
+			}
+			return false;
+		}
+
+		template<typename F>
+		bool for_each(const F& callback) const
+		{
+			for (const auto& elem : _storage)
+			{
+				if (callback(elem))
+					return true;
+			}
+			return false;
+		}
+
+	private:
+		void add_key(const KeyT& key, storage::iterator iter)
+		{
+			_keys.emplace(key, iter);
+		}
+
+		void add_key(KeyT&& key, storage::iterator iter)
+		{
+			_keys.emplace(std::move(key), iter);
+		}
+
+	private:
+		storage _storage;
+		keys _keys;
 	};
 }

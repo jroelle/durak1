@@ -158,50 +158,46 @@ namespace
 
 		void MoveFrom(const ::Card& cardInfo, VisibleCards& other)
 		{
-			if (auto visibleCard = other.Remove(cardInfo))
-				Add(std::move(visibleCard));
+			Add(other.Remove(cardInfo));
 		}
 
-		void Add(std::unique_ptr<VisibleCard>&& visibleCard)
+		void Add(VisibleCard&& visibleCard)
 		{
-			if (auto* newCard = _list.push_back(std::move(visibleCard)))
-			{
-				Animation animation;
-				animation.finalState = getNewCardState();
-				newCard->StartAnimation(animation);
-				onCardAdded(*newCard);
-			}
+			const Card key = visibleCard.GetCardInfo();
+			Animation animation;
+			animation.finalState = getNewCardState();
+			visibleCard.StartAnimation(animation);
+			_storage.push_back(key, std::move(visibleCard));
+			onCardAdded(_storage.at(key));
 		}
 
-		std::unique_ptr<VisibleCard> Remove(const ::Card& cardInfo)
+		VisibleCard Remove(const ::Card& cardInfo)
 		{
-			auto visibleCard = _list.remove(_list.find(cardInfo));
-			if (visibleCard)
-				onCardRemoved(*visibleCard);
+			VisibleCard visibleCard = _storage.remove(cardInfo);
+			onCardRemoved(visibleCard);
 			return visibleCard;
 		}
 
 		void StartAnimation(const Animation& animation)
 		{
-			_list.for_each([&animation](VisibleCard* visibleCard)
+			_storage.for_each([&animation](VisibleCard& visibleCard)
 				{
-					visibleCard->StartAnimation(animation);
+					visibleCard.StartAnimation(animation);
 					return false;
 				});
 		}
 
 		void StartAnimation(const ::Card& cardInfo, const Animation& animation)
 		{
-			if (auto* visibleCard = _list.find(cardInfo))
-				visibleCard->StartAnimation(animation);
+			_storage.at(cardInfo).StartAnimation(animation);
 		}
 
 		bool Draw(sf::Int32 msDelta, sf::RenderTarget& target)
 		{
 			bool res = true;
-			_list.for_each([&res, msDelta, &target](VisibleCard* visibleCard)
+			_storage.for_each([&res, msDelta, &target](VisibleCard& visibleCard)
 				{
-					res = visibleCard->Draw(msDelta, target) && res;
+					res = visibleCard.Draw(msDelta, target) && res;
 					return false;
 				});
 			return res;
@@ -209,14 +205,12 @@ namespace
 
 		size_t GetCount() const
 		{
-			return _list.size();
+			return _storage.size();
 		}
 
 		std::optional<State> GetState(const ::Card& cardInfo) const
 		{
-			if (const auto* visibleCard = _list.find(cardInfo))
-				return visibleCard->GetState();
-			return {};
+			return _storage.at(cardInfo).GetState();
 		}
 
 	private:
@@ -227,21 +221,16 @@ namespace
 	protected:
 		struct Hash
 		{
-			size_t operator()(const ::Card& card) const
+			size_t operator()(const Card& card) const
 			{
-				size_t result = static_cast<size_t>(card.GetSuit()) << 8;
-				result += static_cast<size_t>(card.GetRank());
-				return result;
-			}
-
-			size_t operator()(const VisibleCard& visibleCard) const
-			{
-				return operator()(visibleCard.GetCardInfo());
+				size_t hash = static_cast<size_t>(card.GetSuit()) << 8;
+				hash += static_cast<size_t>(card.GetRank());
+				return hash;
 			}
 		};
 
-		using List = utility::loop_list<VisibleCard, Hash>;
-		List _list;
+		using Storage = utility::mapped_list<Card, VisibleCard, Hash>;
+		Storage _storage;
 		const sf::View _view;
 	};
 
@@ -538,8 +527,7 @@ void UI::OnPlayerDrawDeckCards(const Player& player, const std::vector<Card>& ca
 	const sf::Vector2f startPosition = getDeckPosition();
 	for (const Card& cardInfo : cards)
 	{
-		auto visibleCard = std::make_unique<VisibleCard>(cardInfo, State{ startPosition, 0.f });
-		playerCards.Add(std::move(visibleCard));
+		playerCards.Add(VisibleCard(cardInfo, State{ startPosition, 0.f }));
 	}
 }
 
