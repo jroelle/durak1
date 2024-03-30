@@ -38,6 +38,7 @@ public:
 	void OnPlayerDrawRoundCards(const Player&, const std::vector<Card>&) override;
 	void OnRoundStart(const Round&) override;
 	void OnRoundEnd(const Round&) override;
+	void OnPlayersCreated(const PlayersGroup&) override;
 	void OnStartGame(const Player& first, const Context&) override;
 	void OnUserWin(const Player& user, const Context&) override;
 	void OnUserLose(const Player& opponent, const Context&) override;
@@ -48,6 +49,7 @@ private:
 
 	void onPlayerPlaceCard(const Player&, const Card&);
 	sf::Vector2f getDeckPosition() const;
+	void awaitUpdate();
 
 private:
 	struct Data;

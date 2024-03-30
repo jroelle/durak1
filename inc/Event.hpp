@@ -9,6 +9,7 @@ class Deck;
 class Round;
 class Card;
 class Context;
+class PlayersGroup;
 
 class EventHandler
 {
@@ -23,6 +24,7 @@ public:
 	virtual void OnRoundStart(const Round&) {}
 	virtual void OnRoundEnd(const Round&) {}
 
+	virtual void OnPlayersCreated(const PlayersGroup&) {}
 	virtual void OnStartGame(const Player& first, const Context&) {}
 	virtual void OnUserWin(const Player& user, const Context&) {}
 	virtual void OnUserLose(const Player& opponent, const Context&) {}
@@ -41,7 +43,7 @@ public:
 
 	void Add(Variant variant)
 	{
-		_handlers.emplace_after(_handlers.end(), variant);
+		_handlers.push_front(variant);
 	}
 
 public:
@@ -68,6 +70,10 @@ public:
 	void OnRoundEnd(const Round& round) override
 	{
 		forEach([&](EventHandler* handler) { handler->OnRoundEnd(round); });
+	}
+	void OnPlayersCreated(const PlayersGroup& players) override
+	{
+		forEach([&](EventHandler* handler) { handler->OnPlayersCreated(players); });
 	}
 	void OnStartGame(const Player& first, const Context& context) override
 	{

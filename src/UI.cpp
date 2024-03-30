@@ -167,20 +167,20 @@ namespace
 			Animation animation;
 			animation.finalState = getNewCardState();
 			visibleCard.StartAnimation(animation);
-			_storage.push_back(key, std::move(visibleCard));
-			onCardAdded(_storage.at(key));
+			_cards.push_back(key, std::move(visibleCard));
+			onCardAdded(_cards.at(key));
 		}
 
 		VisibleCard Remove(const ::Card& cardInfo)
 		{
-			VisibleCard visibleCard = _storage.remove(cardInfo);
+			VisibleCard visibleCard = _cards.remove(cardInfo);
 			onCardRemoved(visibleCard);
 			return visibleCard;
 		}
 
 		void StartAnimation(const Animation& animation)
 		{
-			_storage.for_each([&animation](VisibleCard& visibleCard)
+			_cards.for_each([&animation](VisibleCard& visibleCard)
 				{
 					visibleCard.StartAnimation(animation);
 					return false;
@@ -189,13 +189,13 @@ namespace
 
 		void StartAnimation(const ::Card& cardInfo, const Animation& animation)
 		{
-			_storage.at(cardInfo).StartAnimation(animation);
+			_cards.at(cardInfo).StartAnimation(animation);
 		}
 
 		bool Draw(sf::Int32 msDelta, sf::RenderTarget& target)
 		{
 			bool res = true;
-			_storage.for_each([&res, msDelta, &target](VisibleCard& visibleCard)
+			_cards.for_each([&res, msDelta, &target](VisibleCard& visibleCard)
 				{
 					res = visibleCard.Draw(msDelta, target) && res;
 					return false;
@@ -205,12 +205,12 @@ namespace
 
 		size_t GetCount() const
 		{
-			return _storage.size();
+			return _cards.size();
 		}
 
 		std::optional<State> GetState(const ::Card& cardInfo) const
 		{
-			return _storage.at(cardInfo).GetState();
+			return _cards.at(cardInfo).GetState();
 		}
 
 	private:
@@ -230,7 +230,7 @@ namespace
 		};
 
 		using Storage = utility::mapped_list<Card, VisibleCard, Hash>;
-		Storage _storage;
+		Storage _cards;
 		const sf::View _view;
 	};
 
@@ -289,13 +289,38 @@ namespace
 			, _faceDirection(faceDirection)
 		{}
 
-	private:
-		void onCardAdded(const VisibleCard& card) override
+		void ShowCard(const Card& cardInfo)
 		{
-
+			auto& visibleCard = _cards.at(cardInfo);
+			const auto& state = visibleCard.GetState();
+			Animation animation;
+			animation.finalState.position = _position + 20.f * _faceDirection;
+			animation.finalState.angleDegree = state.angleDegree;
+			animation.onFinish = [&]()
+				{
+					Animation animation;
+					animation.finalState = state;
+					visibleCard.StartAnimation(animation);
+				};
+			visibleCard.StartAnimation(animation);
 		}
 
-		void onCardRemoved(const VisibleCard& card) override
+	private:
+		void onCardAdded(const VisibleCard& cardAdded) override
+		{
+			_cards.for_each([&](VisibleCard& visibleCard)
+				{
+					if (visibleCard.GetCardInfo() != cardAdded.GetCardInfo())
+					{
+						//Animation animation;
+						//animation.finalState = 
+						//visibleCard.StartAnimation();
+					}
+					return false;
+				});
+		}
+
+		void onCardRemoved(const VisibleCard& cardRemoved) override
 		{
 
 		}
@@ -327,8 +352,8 @@ namespace
 			case 1:
 				_players.emplace_back(view, sf::Vector2f{ 0.5f * view.getSize().x, 0.f }, sf::Vector2f{ 0.f, 1.f });
 				break;
-			}
 			// TODO
+			}
 		}
 
 		size_t GetCount() const
@@ -410,9 +435,6 @@ bool UI::NeedsToUpdate() const
 
 void UI::Update(const Context& context, sf::Int32 msDelta)
 {
-	if (!_data)
-		_data = std::make_unique<Data>(_window.getView(), context.GetPlayers().GetCount());
-
 	if (!NeedsToUpdate())
 		return;
 
@@ -498,7 +520,7 @@ std::optional<Card> UI::UserPickCard(const User& user)
 	bool skip = false;
 
 	_data->flags |= Data::Flag::PickingCard;
-	while (true)
+	while (_data->flags & Data::Flag::PickingCard)
 	{
 		// ...
 
@@ -521,51 +543,67 @@ void UI::OnPlayerDefend(const Player& defender, const Card& defendCard)
 
 void UI::OnPlayerDrawDeckCards(const Player& player, const std::vector<Card>& cards)
 {
-	_data->flags |= Data::Flag::NeedRedraw;
-
 	PlayerCards& playerCards = _data->playerCards.GetCards(player.GetId());
 	const sf::Vector2f startPosition = getDeckPosition();
 	for (const Card& cardInfo : cards)
 	{
 		playerCards.Add(VisibleCard(cardInfo, State{ startPosition, 0.f }));
 	}
+	awaitUpdate();
 }
 
 void UI::OnPlayerDrawRoundCards(const Player& player, const std::vector<Card>& cards)
 {
-	_data->flags |= Data::Flag::NeedRedraw;
-
 	PlayerCards& playerCards = _data->playerCards.GetCards(player.GetId());
 	for (const auto& cardInfo : cards)
 	{
 		playerCards.MoveFrom(cardInfo, _data->roundCards);
 	}
+	awaitUpdate();
 }
 
 void UI::OnRoundStart(const Round& round)
 {
-	//_data->flags |= Data::Flag::NeedRedraw;
+	awaitUpdate();
 }
 
 void UI::OnRoundEnd(const Round& round)
 {
-	_data->flags |= Data::Flag::NeedRedraw;
 	_data->roundCards.RemoveAll();
+	awaitUpdate();
+}
+
+void UI::OnPlayersCreated(const PlayersGroup& players)
+{
+	_data = std::make_unique<Data>(_window.getView(), players.GetCount() - 1);
+	awaitUpdate();
 }
 
 void UI::OnStartGame(const Player& first, const Context& context)
 {
-	_data->flags |= Data::Flag::NeedRedraw;
+	const PlayersGroup& players = context.GetPlayers();
+	const Card::Suit trumpSuit = context.GetTrumpSuit();
+	players.ForEach([&](const Player* player)
+		{
+			if (const auto trumpCard = player->FindLowestTrumpCard(trumpSuit))
+			{
+				auto& playerCards = _data->playerCards.GetCards(player->GetId());
+				playerCards.ShowCard(*trumpCard);
+			}
+			return false;
+
+		}, players.GetUser());
+	awaitUpdate();
 }
 
 void UI::OnUserWin(const Player& user, const Context& context)
 {
-	_data->flags |= Data::Flag::NeedRedraw;
+	awaitUpdate();
 }
 
 void UI::OnUserLose(const Player& opponent, const Context& context)
 {
-	_data->flags |= Data::Flag::NeedRedraw;
+	awaitUpdate();
 }
 
 sf::Vector2f UI::toModel(const sf::Vector2i& screen) const
@@ -580,12 +618,21 @@ sf::Vector2i UI::toScreen(const sf::Vector2f& model) const
 
 void UI::onPlayerPlaceCard(const Player& player, const Card& card)
 {
-	_data->flags |= Data::Flag::NeedRedraw;
 	_data->roundCards.MoveFrom(card, _data->playerCards.GetCards(player.GetId()));
+	awaitUpdate();
 }
 
 sf::Vector2f UI::getDeckPosition() const
 {
 	const auto size = _window.getView().getSize();
 	return { 0.9f * size.x, 0.5f * size.y };
+}
+
+void UI::awaitUpdate()
+{
+	_data->flags |= Data::Flag::NeedRedraw;
+	while (_data->flags & Data::Flag::NeedRedraw)
+	{
+		// updating in another thread
+	}
 }

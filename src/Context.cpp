@@ -6,6 +6,7 @@ Context::Context(std::weak_ptr<UI> ui, size_t botsNumber)
 	: _ui(ui)
 	, _players(botsNumber)
 {
+	EventHandlers::Get().OnPlayersCreated(_players);
 	_trumpSuit = _deck.GetLast()->GetSuit();
 	_players.DrawCards(_deck, _players.GetUser());
 }
