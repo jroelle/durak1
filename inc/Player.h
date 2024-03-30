@@ -1,5 +1,6 @@
 #pragma once
 #include <optional>
+#include <functional>
 #include "Hand.h"
 #include "Card.h"
 
@@ -18,31 +19,23 @@ public:
 	std::optional<Card> Defend(const Context&, const Card&);
 
 	Player& DrawCards(Deck&);
+	Player& DrawCards(std::vector<Card>&&);
 	std::optional<Card> FindLowestTrumpCard(Card::Suit) const;
-	size_t GetCardCount() const;
-	bool HasAnyCards() const;
 	Id GetId() const;
 
-	template<typename T>
-	Player& AddCards(T&& begin, T&& end)
-	{
-		_hand.AddCards(std::forward<T>(begin), std::forward<T>(end));
-		return *this;
-	}
+	Hand& GetHand() { return _hand; }
+	const Hand& GetHand() const { return _hand; }
 
 protected:
 	Player() = default;
 
 	virtual std::optional<Card> pickAttackCard(const Context&) const = 0;
 	virtual std::optional<Card> pickDefendCard(const Context& , const Card&) const = 0;
-
-	Hand& getHand() { return _hand; }
-	const Hand& getHand() const { return _hand; }
 	
 private:
 	void removeCard(const std::optional<Card>&);
 
 private:
 	Hand _hand;
-	Id _id = 0;
+	const Id _id;
 };

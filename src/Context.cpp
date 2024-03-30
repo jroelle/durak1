@@ -3,22 +3,11 @@
 #include "UI.h"
 
 Context::Context(std::weak_ptr<UI> ui, size_t botsNumber)
-	: _players(botsNumber)
-	, _ui(ui)
+	: _ui(ui)
+	, _players(botsNumber)
 {
 	_trumpSuit = _deck.GetLast()->GetSuit();
-
-	Player* start = _players.GetUser();
-	_players.DrawCards(_deck, start);
-
-	if (auto ui = _ui.lock())
-	{
-		_players.ForEach([&ui, this](const Player* player)
-			{
-				ui->OnPlayerDrawCards(*player, _deck);
-				return false;
-			}, start);
-	}
+	_players.DrawCards(_deck, _players.GetUser());
 }
 
 Deck& Context::GetDeck()

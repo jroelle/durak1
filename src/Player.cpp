@@ -1,6 +1,7 @@
 #include "Player.h"
 #include "Deck.h"
 #include "Context.h"
+#include "Event.hpp"
 
 Player::Player(Id id)
 	: _id(id)
@@ -9,21 +10,45 @@ Player::Player(Id id)
 std::optional<Card> Player::Attack(const Context& context)
 {
 	const auto attackCard = pickAttackCard(context);
-	removeCard(attackCard);
+	if (attackCard)
+	{
+		removeCard(attackCard);
+		EventHandlers::Get().OnPlayerAttack(*this, *attackCard);
+	}
 	return attackCard;
 }
 
 std::optional<Card> Player::Defend(const Context& context, const Card& attackCard)
 {
 	const auto defendCard = pickDefendCard(context, attackCard);
-	removeCard(defendCard);
+	if (defendCard)
+	{
+		removeCard(defendCard);
+		EventHandlers::Get().OnPlayerDefend(*this, *defendCard);
+	}
 	return defendCard;
 }
 
 Player& Player::DrawCards(Deck& deck)
 {
+	std::vector<Card> eventCards;
+	eventCards.reserve(Hand::MinCount - _hand.GetCardCount());
+
 	for (size_t i = _hand.GetCardCount(); i < Hand::MinCount && !deck.IsEmpty(); ++i)
-		_hand.AddCard(*deck.PopFirst());
+	{
+		const auto card = deck.PopFirst();
+		_hand.AddCard(*card);
+		eventCards.push_back(*card);
+	}
+
+	EventHandlers::Get().OnPlayerDrawDeckCards(*this, eventCards);
+	return *this;
+}
+
+Player& Player::DrawCards(std::vector<Card>&& cards)
+{
+	EventHandlers::Get().OnPlayerDrawRoundCards(*this, cards);
+	_hand.AddCards(std::make_move_iterator(cards.begin()), std::make_move_iterator(cards.end()));
 	return *this;
 }
 
@@ -38,16 +63,6 @@ std::optional<Card> Player::FindLowestTrumpCard(Card::Suit trumpSuit) const
 			return lowest && lowest->GetRank() == Card::Rank::Min;
 		});
 	return lowest;
-}
-
-size_t Player::GetCardCount() const
-{
-	return _hand.GetCardCount();
-}
-
-bool Player::HasAnyCards() const
-{
-	return !_hand.IsEmpty();
 }
 
 Player::Id Player::GetId() const

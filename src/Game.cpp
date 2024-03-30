@@ -4,8 +4,8 @@
 #include "Context.h"
 #include "Round.h"
 #include "UI.h"
-#include "Utility.hpp"
 #include "Mutex.h"
+#include "Event.hpp"
 
 namespace
 {
@@ -25,11 +25,11 @@ namespace
 		return firstPlayer ? firstPlayer->first : players.GetUser();
 	}
 
-	inline void UILoop(std::shared_ptr<Context> context)
+	inline void UILoop(std::weak_ptr<Context> context)
 	{
 		constexpr unsigned int framerate = 60;
 
-		if (auto ui = context->GetUI())
+		if (auto ui = context.lock()->GetUI())
 		{
 			auto& window = ui->GetWindow();
 			window.setFramerateLimit(framerate);
@@ -37,13 +37,14 @@ namespace
 		}
 
 		sf::Clock clock;
-		while (context->GetUI() && context->GetUI()->GetWindow().isOpen())
+		while (!context.expired() && context.lock()->GetUI() && context.lock()->GetUI()->GetWindow().isOpen())
 		{
-			auto ui = context->GetUI();
+			auto ctx = context.lock();
+			auto ui = ctx ? ctx->GetUI() : nullptr;
 			if (ui && ui->NeedsToUpdate())
 			{
 				ui->GetWindow().clear();
-				ui->Update(*context, clock.restart().asMilliseconds());
+				ui->Update(*ctx, clock.restart().asMilliseconds());
 				ui->GetWindow().display();
 			}
 			//std::this_thread::sleep_for(std::chrono::milliseconds(1000 / framerate));
@@ -53,11 +54,9 @@ namespace
 	inline void logicLoop(std::shared_ptr<Context> context)
 	{
 		Player* firstPlayer = findFirstPlayer(context->GetPlayers(), context->GetTrumpSuit());
-		if (auto ui = context->GetUI())
-			ui->OnStartGame(*firstPlayer, *context);
+		EventHandlers::Get().OnStartGame(*firstPlayer, *context);
 
 		auto round = std::make_unique<Round>(context, firstPlayer);
-
 		while (round)
 		{
 			round = round->Run();
@@ -69,9 +68,9 @@ void Game::Run()
 {
 	auto ui = std::make_shared<UI>("durak", 500, 500);
 	auto context = std::make_shared<Context>(ui, 2);
+	EventHandlers::Get().Add(ui);
 
 	ui->GetWindow().setActive(false);
-
 	std::thread render(&UILoop, context);
 	render.detach();
 

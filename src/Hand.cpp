@@ -33,7 +33,7 @@ bool Hand::ForEachCard(const Callback& callback) const
 {
 	for (size_t i = 0; i < GetCardCount(); ++i)
 	{
-		if (callback(GetCard(i)))
+		if (callback(_deque[i]))
 			return true;
 	}
 	return false;

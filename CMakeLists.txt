@@ -18,6 +18,7 @@ add_executable(durak1 main.cpp
 					"src/Deck.cpp"
 					"inc/Drawing.h"
 					"src/Drawing.cpp"
+					"inc/Event.hpp"
 					"inc/Game.h"
 					"src/Game.cpp"
 					"inc/Hand.h"

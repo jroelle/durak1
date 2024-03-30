@@ -1,5 +1,6 @@
 #include "UI.h"
 #include <queue>
+#include <set>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include "Utility.hpp"
 #include "Drawing.h"
@@ -68,7 +69,7 @@ namespace
 		using OnFinish = std::function<void()>;
 
 		State finalState;
-		State speedMs;
+		State speedMs = State{ sf::Vector2f(0.003f, 0.003f), 10.f };
 		OnFinish onFinish;
 	};
 
@@ -96,7 +97,11 @@ namespace
 			if (!_animations.empty())
 			{
 				if (_animations.front().finalState == _state)
+				{
+					if (_animations.front().onFinish)
+						_animations.front().onFinish();
 					_animations.pop();
+				}
 
 				if (!_animations.empty())
 				{
@@ -143,7 +148,47 @@ namespace
 	class VisibleCards
 	{
 	public:
+		using ForEachCard = std::function<void(const ::Card&)>;
+
+		VisibleCards(const sf::View& view)
+			: _view(view)
+		{}
+
 		virtual ~VisibleCards() = default;
+
+		void MoveFrom(const ::Card& cardInfo, VisibleCards& other)
+		{
+			if (auto visibleCard = other.Remove(cardInfo))
+				Add(std::move(visibleCard));
+		}
+
+		void Add(std::unique_ptr<VisibleCard>&& visibleCard)
+		{
+			if (auto* newCard = _list.push_back(std::move(visibleCard)))
+			{
+				Animation animation;
+				animation.finalState = getNewCardState();
+				newCard->StartAnimation(animation);
+				onCardAdded(*newCard);
+			}
+		}
+
+		std::unique_ptr<VisibleCard> Remove(const ::Card& cardInfo)
+		{
+			auto visibleCard = _list.remove(_list.find(cardInfo));
+			if (visibleCard)
+				onCardRemoved(*visibleCard);
+			return visibleCard;
+		}
+
+		void StartAnimation(const Animation& animation)
+		{
+			_list.for_each([&animation](VisibleCard* visibleCard)
+				{
+					visibleCard->StartAnimation(animation);
+					return false;
+				});
+		}
 
 		void StartAnimation(const ::Card& cardInfo, const Animation& animation)
 		{
@@ -167,7 +212,7 @@ namespace
 			return _list.size();
 		}
 
-		State GetState(const ::Card& cardInfo) const
+		std::optional<State> GetState(const ::Card& cardInfo) const
 		{
 			if (const auto* visibleCard = _list.find(cardInfo))
 				return visibleCard->GetState();
@@ -175,6 +220,11 @@ namespace
 		}
 
 	private:
+		virtual void onCardAdded(const VisibleCard&) {}
+		virtual void onCardRemoved(const VisibleCard&) {}
+		virtual State getNewCardState() const = 0;
+
+	protected:
 		struct Hash
 		{
 			size_t operator()(const ::Card& card) const
@@ -204,6 +254,132 @@ namespace
 
 		using List = utility::loop_list<VisibleCard, Hash, Equal>;
 		List _list;
+		const sf::View _view;
+	};
+
+	class RoundCards final : public VisibleCards
+	{
+	public:
+		using VisibleCards::VisibleCards;
+
+		void RemoveAll()
+		{
+			Animation animation;
+			animation.finalState.position = { -200.f, -200.f };
+			StartAnimation(animation);
+		}
+
+	private:
+		State getNewCardState() const override
+		{
+			const size_t roundCardCount = _list.size();
+			if (roundCardCount >= Round::MaxAttacksCount * 2)
+				return {};
+
+			const size_t rows = findMinDenominator(Round::MaxAttacksCount, 2);
+			const size_t columns = Round::MaxAttacksCount / rows;
+
+			const size_t index = roundCardCount;
+			const bool isOverlayed = index % 2 == 0;
+			const size_t pair = index / 2;
+
+			const size_t column = pair % rows;
+			const size_t row = pair / rows;
+
+			const sf::Vector2f cardSize = getCardSize();
+			const sf::Vector2f overlapOffset = { cardSize.x * 0.2f, 0.f };
+			const sf::Vector2f cardPairSize = cardSize + overlapOffset;
+			const sf::Vector2f roundArea = 0.8f * _view.getSize();
+			const sf::Vector2f gap = { (roundArea.x - columns * cardPairSize.x) / (columns - 1), (roundArea.y - rows * cardPairSize.y) / (rows - 1) };
+
+			sf::Vector2f position;
+			position.x = column * cardPairSize.x + std::max(column - 1, (size_t)0) * gap.x;
+			position.y = row * cardPairSize.y + std::max(row - 1, (size_t)0) * gap.y;
+			position += 0.f * cardSize;
+			if (isOverlayed)
+				position += overlapOffset;
+
+			return { position, 0.f };
+		}
+	};
+
+	class PlayerCards final : public VisibleCards
+	{
+	public:
+		PlayerCards(const sf::View& view, const sf::Vector2f& position, const sf::Vector2f& faceDirection)
+			: VisibleCards(view)
+			, _position(position)
+			, _faceDirection(faceDirection)
+		{}
+
+	private:
+		void onCardAdded(const VisibleCard& card) override
+		{
+
+		}
+
+		void onCardRemoved(const VisibleCard& card) override
+		{
+
+		}
+
+		State getNewCardState() const override
+		{
+
+		}
+
+	private:
+		sf::Vector2f _position;
+		sf::Vector2f _faceDirection;
+	};
+
+	class Players
+	{
+	public:
+		Players(const sf::View& view, size_t botsNumber)
+		{
+			_players.reserve(botsNumber + 1);
+			_players.emplace_back(view, sf::Vector2f{ 0.5f * view.getSize().x, view.getSize().y }, sf::Vector2f{ 0.f, -1.f });
+
+			switch (botsNumber)
+			{
+			case 2:
+				_players.emplace_back(view, sf::Vector2f{ 0.f, 0.5f * view.getSize().y }, sf::Vector2f{ 1.f, 0.f });
+				[[fallthrough]];
+
+			case 1:
+				_players.emplace_back(view, sf::Vector2f{ 0.5f * view.getSize().x, 0.f }, sf::Vector2f{ 0.f, 1.f });
+				break;
+			}
+			// TODO
+		}
+
+		size_t GetCount() const
+		{
+			return _players.size();
+		}
+
+		PlayerCards& GetCards(Player::Id id)
+		{
+			return _players[id];
+		}
+
+		const PlayerCards& GetCards(Player::Id id) const
+		{
+			return _players[id];
+		}
+
+		bool Draw(sf::Int32 msDelta, sf::RenderTarget& target)
+		{
+			bool res = true;
+			for (auto& player : _players)
+				res = player.Draw(msDelta, target) && res;
+			return res;
+		}
+
+	private:
+		using Index = ::Player::Id;
+		std::vector<PlayerCards> _players;
 	};
 }
 
@@ -219,15 +395,20 @@ struct UI::Data
 		};
 	};
 
-	std::map<Player::Id, VisibleCards> playerCards;
-	VisibleCards roundCards;
+	Players playerCards;
+	RoundCards roundCards;
 	std::underlying_type_t<Flag::Value> flags = Flag::Default;
 	sf::Vector2f cursorPosition;
+
+	Data(const sf::View& view, size_t botsNumber)
+		: playerCards(view, botsNumber)
+		, roundCards(view)
+	{
+	}
 };
 
 UI::UI(const std::string& title, unsigned int width, unsigned int height)
 	: _window(sf::VideoMode{ width, height }, sf::String(title), sf::Style::Close)
-	, _data(std::make_unique<Data>())
 {
 }
 
@@ -252,6 +433,9 @@ bool UI::NeedsToUpdate() const
 
 void UI::Update(const Context& context, sf::Int32 msDelta)
 {
+	if (!_data)
+		_data = std::make_unique<Data>(_window.getView(), context.GetPlayers().GetCount());
+
 	if (!NeedsToUpdate())
 		return;
 
@@ -268,7 +452,7 @@ void UI::Update(const Context& context, sf::Int32 msDelta)
 
 	{
 		Screen::Deck deck(context.GetDeck());
-		deck.setOrigin(0.9f * size.x, 0.5f * size.y);
+		deck.setOrigin(getDeckPosition());
 		_window.draw(deck);
 	}
 
@@ -283,9 +467,7 @@ void UI::Update(const Context& context, sf::Int32 msDelta)
 	}
 
 	bool finished = true;
-	for (auto& [playerId, playerCards] : _data->playerCards)
-		finished = playerCards.Draw(msDelta, _window) && finished;
-
+	finished = _data->playerCards.Draw(msDelta, _window) && finished;
 	finished = _data->roundCards.Draw(msDelta, _window) && finished;
 
 	if (finished)
@@ -333,61 +515,6 @@ bool UI::IsLocked() const
 	return _data && (_data->flags & Data::Flag::NeedRedraw);
 }
 
-void UI::OnRoundStart(const Round& round)
-{
-	_data->flags |= Data::Flag::NeedRedraw;
-	_data->playerCards.clear();
-}
-
-void UI::OnPlayerAttack(const Player& attacker, const Card& attackCard)
-{
-	onPlayerPlaceCard(attacker, attackCard);
-}
-
-void UI::OnPlayerDefend(const Player& defender, const Card& attackCard, const Card& defendCard)
-{
-	onPlayerPlaceCard(defender, attackCard, defendCard);
-}
-
-void UI::OnRoundEnd(const Round& round)
-{
-	_data->flags |= Data::Flag::NeedRedraw;
-
-	// remove cards from the table
-}
-
-void UI::OnPlayerDrawCards(const Player& player, const Deck& deck)
-{
-	_data->flags |= Data::Flag::NeedRedraw;
-
-	auto iter = _data->playerCards.find(player.GetId());
-	if (iter != _data->playerCards.end())
-	{
-		auto& cards = iter->second;
-		cards.StartAnimation();
-	}
-}
-
-void UI::OnPlayerDrawCards(const Player& player, const Round& round)
-{
-	_data->flags |= Data::Flag::NeedRedraw;
-}
-
-void UI::OnStartGame(const Player& first, const Context& context)
-{
-	_data->flags |= Data::Flag::NeedRedraw;
-}
-
-void UI::OnUserWin(const Player& user, const Context& context)
-{
-	_data->flags |= Data::Flag::NeedRedraw;
-}
-
-void UI::OnUserLose(const Player& opponent, const Context& context)
-{
-	_data->flags |= Data::Flag::NeedRedraw;
-}
-
 std::optional<Card> UI::UserPickCard(const User& user)
 {
 	std::optional<Card> card;
@@ -405,6 +532,66 @@ std::optional<Card> UI::UserPickCard(const User& user)
 	return card;
 }
 
+void UI::OnPlayerAttack(const Player& attacker, const Card& attackCard)
+{
+	onPlayerPlaceCard(attacker, attackCard);
+}
+
+void UI::OnPlayerDefend(const Player& defender, const Card& defendCard)
+{
+	onPlayerPlaceCard(defender, defendCard);
+}
+
+void UI::OnPlayerDrawDeckCards(const Player& player, const std::vector<Card>& cards)
+{
+	_data->flags |= Data::Flag::NeedRedraw;
+
+	PlayerCards& playerCards = _data->playerCards.GetCards(player.GetId());
+	const sf::Vector2f startPosition = getDeckPosition();
+	for (const Card& cardInfo : cards)
+	{
+		auto visibleCard = std::make_unique<VisibleCard>(cardInfo, State{ startPosition, 0.f });
+		playerCards.Add(std::move(visibleCard));
+	}
+}
+
+void UI::OnPlayerDrawRoundCards(const Player& player, const std::vector<Card>& cards)
+{
+	_data->flags |= Data::Flag::NeedRedraw;
+
+	PlayerCards& playerCards = _data->playerCards.GetCards(player.GetId());
+	for (const auto& cardInfo : cards)
+	{
+		playerCards.MoveFrom(cardInfo, _data->roundCards);
+	}
+}
+
+void UI::OnRoundStart(const Round& round)
+{
+	//_data->flags |= Data::Flag::NeedRedraw;
+}
+
+void UI::OnRoundEnd(const Round& round)
+{
+	_data->flags |= Data::Flag::NeedRedraw;
+	_data->roundCards.RemoveAll();
+}
+
+void UI::OnStartGame(const Player& first, const Context& context)
+{
+	_data->flags |= Data::Flag::NeedRedraw;
+}
+
+void UI::OnUserWin(const Player& user, const Context& context)
+{
+	_data->flags |= Data::Flag::NeedRedraw;
+}
+
+void UI::OnUserLose(const Player& opponent, const Context& context)
+{
+	_data->flags |= Data::Flag::NeedRedraw;
+}
+
 sf::Vector2f UI::toModel(const sf::Vector2i& screen) const
 {
 	return _window.mapPixelToCoords(screen);
@@ -415,63 +602,14 @@ sf::Vector2i UI::toScreen(const sf::Vector2f& model) const
 	return _window.mapCoordsToPixel(model);
 }
 
-sf::Vector2f UI::findRoundCardPlace(const std::optional<Card>& attackCard) const
+void UI::onPlayerPlaceCard(const Player& player, const Card& card)
 {
-	if (!_data)
-		return {};
-
-	const size_t roundCardCount = _data->roundCards.GetCount();
-	if (roundCardCount >= Round::MaxAttacksCount * 2)
-		return {};
-
-	const size_t rows = findMinDenominator(Round::MaxAttacksCount, 2);
-	const size_t columns = Round::MaxAttacksCount / rows;
-
-	const size_t index = roundCardCount;
-	const bool isOverlayed = index % 2 == 0;
-	const size_t pair = index / 2;
-
-	const size_t column = pair % rows;
-	const size_t row = pair / rows;
-
-	const sf::Vector2f cardSize = getCardSize();
-	const sf::Vector2f overlapOffset = { cardSize.x * 0.2f, 0.f };
-	const sf::Vector2f cardPairSize = cardSize + overlapOffset;
-	const sf::Vector2f roundArea = 0.8f * _window.getView().getSize();
-	const sf::Vector2f gap = { (roundArea.x - columns * cardPairSize.x) / (columns - 1), (roundArea.y - rows * cardPairSize.y) / (rows - 1) };
-
-	sf::Vector2f position;
-	position.x = column * cardPairSize.x + std::max(column - 1, (size_t)0) * gap.x;
-	position.y = row * cardPairSize.y + std::max(row - 1, (size_t)0) * gap.y;
-	position += 0.f * cardSize;
-	if (isOverlayed)
-		position += overlapOffset;
-	return position;
+	_data->flags |= Data::Flag::NeedRedraw;
+	_data->roundCards.MoveFrom(card, _data->playerCards.GetCards(player.GetId()));
 }
 
-void UI::onPlayerPlaceCard(const Player& player, const Card& attackCard, const std::optional<Card>& defendCard)
+sf::Vector2f UI::getDeckPosition() const
 {
-	auto iter = _data->playerCards.find(player.GetId());
-	if (iter != _data->playerCards.end())
-	{
-		_data->flags |= Data::Flag::NeedRedraw;
-
-		auto& cards = iter->second;
-		const bool isDefending = defendCard.has_value();
-		const auto& playerCard = defendCard ? defendCard.value() : attackCard;
-		sf::Vector2f finalPosition;
-		if (isDefending)
-			finalPosition = findRoundCardPlace(attackCard);
-		else
-			finalPosition = findRoundCardPlace();
-
-		Animation animation;
-		animation.finalState.position = finalPosition;
-		animation.finalState.angleDegree = 0.f;
-		animation.speedMs.angleDegree = 0.006f;
-		animation.speedMs.position = { 0.003f, 0.003f };
-		cards.StartAnimation(playerCard, animation);
-
-		// TODO: move other cards closer to each other
-	}
+	const auto size = _window.getView().getSize();
+	return { 0.9f * size.x, 0.5f * size.y };
 }

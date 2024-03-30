@@ -79,29 +79,39 @@ namespace utility
 		}
 
 		template<typename... Args>
-		T* emplace(Args&&... args)
+		T* emplace_back(Args&&... args)
 		{
-			return push(element(std::forward<Args>(args)...));
+			return push(element(std::forward<Args>(args)...), false);
 		}
 
-		T* push(element::holder&& h)
+		template<typename... Args>
+		T* emplace_front(Args&&... args)
 		{
-			return push(element(std::move(h)));
+			return push(element(std::forward<Args>(args)...), true);
+		}
+
+		T* push_back(element::holder&& h)
+		{
+			return push(element(std::move(h)), false);
+		}
+
+		T* push_front(element::holder&& h)
+		{
+			return push(element(std::move(h)), true);
+		}
+
+		element::holder remove(const T* v)
+		{
+			element* elem = remove_element(v);
+			typename element::holder holder;
+			std::swap(elem->_holder, holder);
+			_storage.erase(*elem);
+			return holder;
 		}
 
 		void erase(const T* v)
 		{
-			if (!_root)
-				return;
-
-			const element* elem = find(v);
-			if (!elem)
-				return;
-			
-			if (H{}(*elem->value()) == H{}(*_root->value()))
-				_root = elem->next();
-
-			previous(elem)->_next = elem->next();
+			element* elem = remove_element(v);
 			_storage.erase(*elem); // _storage.erase(*v) in C++23
 		}
 
@@ -138,11 +148,22 @@ namespace utility
 		T* find(const K& key) const
 		{
 			auto iter = _storage.find(key);
-			return iter != _storage.end() ? iter->value() : nullptr;
+			return iter != _storage.end() ? const_cast<T*>(iter->value()) : nullptr;
+		}
+
+		bool contains(const T* v) const
+		{
+			return v && _storage.contains(*v);
+		}
+
+		template<typename K>
+		bool contains(const K& key) const
+		{
+			return _storage.contains(key);
 		}
 
 	private:
-		T* push(element&& tmp)
+		T* push(element&& tmp, bool front)
 		{
 			if (!tmp.value())
 				return nullptr;
@@ -154,6 +175,9 @@ namespace utility
 				auto* last = previous(_root);
 				elem->_next = _root;
 				last->_next = elem;
+
+				if (front)
+					_root = elem;
 			}
 			else
 			{
@@ -184,6 +208,22 @@ namespace utility
 				prev = prev->next();
 
 			return prev;
+		}
+
+		element* remove_element(const T* v)
+		{
+			if (!_root)
+				return nullptr;
+
+			element* elem = find(v);
+			if (!elem)
+				return nullptr;
+
+			if (H{}(*elem->value()) == H{}(*_root->value()))
+				_root = elem->next();
+
+			previous(elem)->_next = elem->next();
+			return elem;
 		}
 
 		template<typename F>

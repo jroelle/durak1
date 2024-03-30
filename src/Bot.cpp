@@ -5,17 +5,17 @@
 std::optional<Card> Bot::pickAttackCard(const Context& context) const
 {
 	// TODO
-	if (getHand().IsEmpty())
+	if (GetHand().IsEmpty())
 		return std::nullopt;
-	return getHand().GetCard(0);
+	return GetHand().GetCard(0);
 }
 
 std::optional<Card> Bot::pickDefendCard(const Context& context, const Card& attackCard) const
 {
 	// TODO
-	for (size_t i = 0; i < getHand().GetCardCount(); ++i)
+	for (size_t i = 0; i < GetHand().GetCardCount(); ++i)
 	{
-		const Card card = getHand().GetCard(i);
+		const Card card = GetHand().GetCard(i);
 		if (card.Beats(attackCard, context.GetTrumpSuit()))
 			return card;
 	}

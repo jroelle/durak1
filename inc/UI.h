@@ -3,6 +3,7 @@
 #include <optional>
 #include <SFML/Graphics.hpp>
 #include <SFML/Window/Cursor.hpp>
+#include "Event.hpp"
 #include "Card.h"
 
 namespace sf
@@ -16,7 +17,7 @@ class Deck;
 class Context;
 class User;
 
-class UI
+class UI : public EventHandler
 {
 public:
 	UI(const std::string&, unsigned int width, unsigned int height);
@@ -28,26 +29,25 @@ public:
 	void Update(const Context&, sf::Int32 msDelta);
 	bool HandleEvent(const sf::Event&);
 	bool IsLocked() const;
-
-	void OnRoundStart(const Round&);
-	void OnPlayerAttack(const Player& attacker, const Card& attackCard);
-	void OnPlayerDefend(const Player& defender, const Card& attackCard, const Card& defendCard);
-	void OnRoundEnd(const Round&);
-	void OnPlayerDrawCards(const Player&, const Deck&);
-	void OnPlayerDrawCards(const Player&, const Round&);
-
-	void OnStartGame(const Player& first, const Context&);
-	void OnUserWin(const Player& user, const Context&);
-	void OnUserLose(const Player& opponent, const Context&);
-
 	std::optional<Card> UserPickCard(const User&);
+
+public:
+	void OnPlayerAttack(const Player&, const Card&) override;
+	void OnPlayerDefend(const Player&, const Card&) override;
+	void OnPlayerDrawDeckCards(const Player&, const std::vector<Card>&) override;
+	void OnPlayerDrawRoundCards(const Player&, const std::vector<Card>&) override;
+	void OnRoundStart(const Round&) override;
+	void OnRoundEnd(const Round&) override;
+	void OnStartGame(const Player& first, const Context&) override;
+	void OnUserWin(const Player& user, const Context&) override;
+	void OnUserLose(const Player& opponent, const Context&) override;
 
 private:
 	sf::Vector2f toModel(const sf::Vector2i&) const;
 	sf::Vector2i toScreen(const sf::Vector2f&) const;
 
-	sf::Vector2f findRoundCardPlace(const std::optional<Card>& attackCard = {}) const;
-	void onPlayerPlaceCard(const Player& player, const Card& attackCard, const std::optional<Card>& defendCard = {});
+	void onPlayerPlaceCard(const Player&, const Card&);
+	sf::Vector2f getDeckPosition() const;
 
 private:
 	struct Data;

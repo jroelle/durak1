@@ -3,12 +3,13 @@
 #include "Context.h"
 #include "Player.h"
 #include "UI.h"
+#include "Event.hpp"
 
 namespace
 {
 	inline bool playerHasAnyCards(const Player* player)
 	{
-		return player->HasAnyCards();
+		return !player->GetHand().IsEmpty();
 	}
 }
 
@@ -20,7 +21,6 @@ Round::Round(std::shared_ptr<Context> context, Player* attacker)
 
 std::unique_ptr<Round> Round::Run()
 {
-	auto ui = _context->GetUI();
 	auto& players = _context->GetPlayers();
 
 	auto* attacker = _attacker;
@@ -28,8 +28,7 @@ std::unique_ptr<Round> Round::Run()
 	if (!attacker || !defender)
 		return nullptr;
 
-	if (ui)
-		ui->OnRoundStart(*this);
+	EventHandlers::Get().OnRoundStart(*this);
 
 	_cards = {};
 	_cards.reserve(MaxAttacksCount * 2);
@@ -47,35 +46,24 @@ std::unique_ptr<Round> Round::Run()
 		if (attackCard)
 		{
 			_cards.push_back(*attackCard);
-			if (ui)
-				ui->OnPlayerAttack(*attackerPickedCard, *attackCard);
-
 			if (const auto defendCard = defender->Defend(*_context, *attackCard))
 			{
 				_cards.push_back(*defendCard);
-				if (ui)
-					ui->OnPlayerDefend(*attackerPickedCard, *attackCard, *defendCard);
 			}
 			else
 			{
-				defender->AddCards(_cards.begin(), _cards.end());
-				if (ui)
-					ui->OnPlayerDrawCards(*defender, *this);
-				_cards.clear();
+				defender->DrawCards(std::move(_cards));
 				break;
 			}
 		}
 		break;
 	}
 
-	if (ui)
-		ui->OnRoundEnd(*this);
+	EventHandlers::Get().OnRoundEnd(*this);
 
 	const auto drawCards = [&](Player* player)
 		{
 			player->DrawCards(_context->GetDeck());
-			if (!_context->GetDeck().IsEmpty() && ui)
-				ui->OnPlayerDrawCards(*player, _context->GetDeck());
 			return _context->GetDeck().IsEmpty();
 		};
 
@@ -83,17 +71,15 @@ std::unique_ptr<Round> Round::Run()
 	drawCards(defender);
 
 	const auto* user = players.GetUser();
-	if (!user->HasAnyCards())
+	if (!playerHasAnyCards(user))
 	{
-		if (ui)
-			ui->OnUserWin(*players.GetUser(), *_context);
+		EventHandlers::Get().OnUserWin(*user, *_context);
 		return nullptr;
 	}
 
 	if (_context->GetDeck().IsEmpty() && !players.ForEachOtherPlayer(playerHasAnyCards, user))
 	{
-		if (ui)
-			ui->OnUserLose(*players.GetUser(), *_context);
+		EventHandlers::Get().OnUserLose(*players.GetUser(), *_context);
 		return nullptr;
 	}
 
