@@ -14,6 +14,22 @@ namespace
 {
 	constexpr float eps = 1.e-5f;
 
+	inline float length(const sf::Vector2f& v)
+	{
+		return std::hypot(v.x, v.y);
+	}
+
+	inline float dotProduct(const sf::Vector2f& a, const sf::Vector2f& b)
+	{
+		return a.x * b.x + a.y * b.y;
+	}
+
+	inline float angle(const sf::Vector2f& a, const sf::Vector2f& b)
+	{
+		const float cos = dotProduct(a, b) / (length(a) * length(b));
+		return std::acos(cos);
+	}
+
 	inline sf::Vector2f getCardSize()
 	{
 		return Screen::Card{}.getSize();
@@ -69,7 +85,7 @@ namespace
 		using OnFinish = std::function<void()>;
 
 		State finalState;
-		State speedMs = State{ sf::Vector2f(0.003f, 0.003f), 10.f };
+		sf::Int32 timeMs = 500;
 		OnFinish onFinish;
 	};
 
@@ -96,24 +112,20 @@ namespace
 
 			if (!_animations.empty())
 			{
-				if (_animations.front().finalState == _state)
-				{
-					if (_animations.front().onFinish)
-						_animations.front().onFinish();
+				auto& animation = _animations.front();
+				sf::Vector2f dir = animation.finalState.position - _state.position;
+				dir /= static_cast<float>(msDelta);
+
+				float angleDelta = animation.finalState.angleDegree - _state.angleDegree;
+				angleDelta /= static_cast<float>(msDelta);
+
+				_state.position += dir;
+				_state.angleDegree += angleDelta;
+
+				if (animation.timeMs > msDelta)
+					animation.timeMs -= msDelta;
+				else
 					_animations.pop();
-				}
-
-				if (!_animations.empty())
-				{
-					const auto& animation = _animations.front();
-					sf::Vector2f dir = animation.finalState.position - _state.position;
-					dir /= std::hypot(dir.x, dir.y);
-					dir.x *= static_cast<float>(msDelta) * animation.speedMs.position.x;
-					dir.y *= static_cast<float>(msDelta) * animation.speedMs.position.y;
-
-					_state.position += dir;
-					_state.angleDegree += static_cast<float>(msDelta) * animation.speedMs.angleDegree;
-				}
 			}
 
 			screenCard->setOrigin(_state.position);
@@ -327,7 +339,10 @@ namespace
 
 		State getNewCardState() const override
 		{
-			return {};
+			State state;
+			state.position = _position;
+			state.angleDegree = angle({ 0.f, -1.f }, _faceDirection);
+			return state;
 		}
 
 	private:
@@ -631,8 +646,8 @@ sf::Vector2f UI::getDeckPosition() const
 void UI::awaitUpdate()
 {
 	_data->flags |= Data::Flag::NeedRedraw;
-	while (_data->flags & Data::Flag::NeedRedraw)
-	{
-		// updating in another thread
-	}
+	//while (_data->flags & Data::Flag::NeedRedraw)
+	//{
+	//	// updating in another thread
+	//}
 }

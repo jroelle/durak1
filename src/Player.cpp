@@ -32,7 +32,8 @@ std::optional<Card> Player::Defend(const Context& context, const Card& attackCar
 Player& Player::DrawCards(Deck& deck)
 {
 	std::vector<Card> eventCards;
-	eventCards.reserve(Hand::MinCount - _hand.GetCardCount());
+	if (Hand::MinCount > _hand.GetCardCount())
+		eventCards.reserve(Hand::MinCount - _hand.GetCardCount());
 
 	for (size_t i = _hand.GetCardCount(); i < Hand::MinCount && !deck.IsEmpty(); ++i)
 	{
