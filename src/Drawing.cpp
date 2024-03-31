@@ -303,8 +303,8 @@ namespace Screen
 			return;
 
 		const auto pixelSize = getPixelSize(target);
-		bounds->width -= pixelSize.x;
-		bounds->height -= pixelSize.y;
+		bounds->width -= 2.f * pixelSize.x;
+		bounds->height -= 2.f * pixelSize.y;
 
 		sf::RectangleShape bg(bounds->getSize());
 		bg.setOrigin(0.5f * bg.getSize());
