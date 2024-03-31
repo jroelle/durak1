@@ -33,7 +33,10 @@ namespace
 
 	inline sf::Vector2f rotate(const sf::Vector2f& v, float angleDegree)
 	{
-		return sf::Vector2f{ v.x * std::cos(angleDegree * std::numbers::pi_v<float> / 180.f), v.y * std::sin(angleDegree * std::numbers::pi_v<float> / 180.f) };
+		const float cos = std::cos(angleDegree * std::numbers::pi_v<float> / 180.f);
+		const float sin = std::sin(angleDegree * std::numbers::pi_v<float> / 180.f);
+
+		return sf::Vector2f{ v.x * cos - v.y * sin, v.x * sin + v.y * cos };
 	}
 
 	inline sf::Vector2f getCardSize()
@@ -91,7 +94,7 @@ namespace
 		using OnFinish = std::function<void()>;
 
 		State finalState;
-		sf::Int32 timeMs = 2000;
+		sf::Int32 timeMs = 5000;
 		OnFinish onFinish;
 	};
 
@@ -348,8 +351,10 @@ namespace
 
 		State getNewCardState() const override
 		{
+			const sf::Vector2f dir = rotate(_faceDirection, 90.f);
+
 			State state;
-			state.position = _position + static_cast<float>(_cards.size()) * 20.f * rotate(_faceDirection, 90.f);
+			state.position = _position + static_cast<float>(_cards.size()) * 20.f * dir;
 			state.angleDegree = angleDegree({ 0.f, -1.f }, _faceDirection);
 			return state;
 		}
