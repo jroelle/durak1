@@ -302,7 +302,7 @@ namespace
 
 		State getNewCardState() const
 		{
-			const size_t roundCardCount = /*_list.size();*/ 0;
+			const size_t roundCardCount = _cards.size();
 			if (roundCardCount >= Round::MaxAttacksCount * 2)
 				return {};
 
@@ -319,13 +319,14 @@ namespace
 			const sf::Vector2f cardSize = getCardSize();
 			const sf::Vector2f overlapOffset = { cardSize.x * 0.2f, 0.f };
 			const sf::Vector2f cardPairSize = cardSize + overlapOffset;
-			const sf::Vector2f roundArea = 0.8f * _view.getSize();
+			const sf::Vector2f roundArea = 0.6f * _view.getSize();
 			const sf::Vector2f gap = { (roundArea.x - columns * cardPairSize.x) / (columns - 1), (roundArea.y - rows * cardPairSize.y) / (rows - 1) };
 
-			sf::Vector2f position;
-			position.x = column * cardPairSize.x + std::max(column - 1, (size_t)0) * gap.x;
-			position.y = row * cardPairSize.y + std::max(row - 1, (size_t)0) * gap.y;
-			position += 0.f * cardSize;
+			const sf::Vector2f start = 0.5f * (_view.getSize() - roundArea);
+
+			sf::Vector2f position = start;
+			position.x += column * cardPairSize.x + column * gap.x;
+			position.y += row * cardPairSize.y + row * gap.y;
 			if (isOverlayed)
 				position += overlapOffset;
 
