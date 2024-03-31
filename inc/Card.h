@@ -9,7 +9,9 @@ public:
 		Hearts,
 		Diamonds,
 		Clubs,
-		Spades
+		Spades,
+
+		Count
 	};
 
 	enum class Rank : uint8_t

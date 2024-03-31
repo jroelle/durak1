@@ -269,6 +269,11 @@ namespace utility
 			return _storage.size();
 		}
 
+		bool empty() const
+		{
+			return _storage.empty();
+		}
+
 		ValueT& at(const KeyT& key)
 		{
 			return *_keys.at(key);

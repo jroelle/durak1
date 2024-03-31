@@ -28,7 +28,9 @@ namespace
 	inline float angleDegree(const sf::Vector2f& a, const sf::Vector2f& b)
 	{
 		const float cos = dotProduct(a, b) / (length(a) * length(b));
-		return std::acos(cos) * 180.f / std::numbers::pi_v<float>;
+		const float angle = std::acos(cos) * 180.f / std::numbers::pi_v<float>;
+		const float remains = angle / 180.f - std::trunc(angle / 180.f);
+		return remains * 180.f;
 	}
 
 	inline sf::Vector2f rotate(const sf::Vector2f& v, float angleDegree)
@@ -132,9 +134,15 @@ namespace
 				_state.angleDegree += angleDelta;
 
 				if (animation.timeMs > msDelta)
+				{
 					animation.timeMs -= msDelta;
+				}
 				else
+				{
+					if (animation.onFinish)
+						animation.onFinish();
 					_animations.pop();
+				}
 			}
 
 			screenCard->setOrigin(_state.position);
@@ -147,6 +155,11 @@ namespace
 		void StartAnimation(const Animation& animation)
 		{
 			_animations.push(animation);
+		}
+
+		void ResetAnimation()
+		{
+			_animations = {};
 		}
 
 		const State& GetState() const
@@ -185,9 +198,6 @@ namespace
 		void Add(VisibleCard&& visibleCard)
 		{
 			const Card key = visibleCard.GetCardInfo();
-			Animation animation;
-			animation.finalState = getNewCardState();
-			visibleCard.StartAnimation(animation);
 			_cards.push_back(key, std::move(visibleCard));
 			onCardAdded(_cards.at(key));
 		}
@@ -237,7 +247,6 @@ namespace
 	private:
 		virtual void onCardAdded(VisibleCard&) {}
 		virtual void onCardRemoved(VisibleCard&) {}
-		virtual State getNewCardState() const = 0;
 
 	protected:
 		struct Hash
@@ -268,7 +277,16 @@ namespace
 		}
 
 	private:
-		State getNewCardState() const override
+		void onCardAdded(VisibleCard& cardAdded)
+		{
+			cardAdded.SetOpen(true);
+
+			Animation animation;
+			animation.finalState = getNewCardState();
+			cardAdded.StartAnimation(animation);
+		}
+
+		State getNewCardState() const
 		{
 			const size_t roundCardCount = /*_list.size();*/ 0;
 			if (roundCardCount >= Round::MaxAttacksCount * 2)
@@ -316,47 +334,78 @@ namespace
 		{
 			auto& visibleCard = _cards.at(cardInfo);
 			const auto& state = visibleCard.GetState();
-			Animation animation;
-			animation.finalState.position = _position + 20.f * _faceDirection;
-			animation.finalState.angleDegree = state.angleDegree;
-			animation.onFinish = [&]()
-				{
-					Animation animation;
-					animation.finalState = state;
-					visibleCard.StartAnimation(animation);
-				};
-			visibleCard.StartAnimation(animation);
+			{
+				Animation animation;
+				animation.finalState.position = state.position + 5.f * _faceDirection;
+				animation.finalState.angleDegree = state.angleDegree;
+				animation.onFinish = [&]()
+					{
+						visibleCard.SetOpen(true);
+					};
+				visibleCard.StartAnimation(animation);
+			}
+
+			{
+				Animation animation;
+				animation.finalState = state;
+				animation.onFinish = [&]()
+					{
+						visibleCard.SetOpen(IsOpen());
+					};
+				visibleCard.StartAnimation(animation);
+			}
+		}
+
+		std::optional<Card> FindCardUnderCursor(const sf::Vector2f& cursor) const
+		{
+			// TODO
+			return std::nullopt;
+		}
+
+		virtual bool IsOpen() const
+		{
+			return false;
 		}
 
 	private:
 		void onCardAdded(VisibleCard& cardAdded) override
 		{
-			cardAdded.SetOpen(false);
-			_cards.for_each([&](VisibleCard& visibleCard)
-				{
-					if (visibleCard.GetCardInfo() != cardAdded.GetCardInfo())
-					{
-						//Animation animation;
-						//animation.finalState = 
-						//visibleCard.StartAnimation();
-					}
-					return false;
-				});
+			cardAdded.SetOpen(IsOpen());
+			moveCards();
 		}
 
 		void onCardRemoved(VisibleCard& cardRemoved) override
 		{
-			cardRemoved.SetOpen(true);
+			moveCards();
 		}
 
-		State getNewCardState() const override
+	private:
+		void moveCards()
 		{
+			if (_cards.empty())
+				return;
+
+			const float cardsCount = static_cast<float>(_cards.size());
+			const sf::Vector2f cardSize = getCardSize();
 			const sf::Vector2f dir = rotate(_faceDirection, 90.f);
 
-			State state;
-			state.position = _position + static_cast<float>(_cards.size()) * 20.f * dir;
-			state.angleDegree = angleDegree({ 0.f, -1.f }, _faceDirection);
-			return state;
+			const float maxWidth = 0.6f * std::min(_view.getSize().x, _view.getSize().y);
+			float gap = cardSize.x * 0.4f;
+			const float cardsWidth = cardSize.x * cardsCount + (cardsCount - 1) * gap;
+			const float offset = cardsWidth > maxWidth ? (maxWidth - cardSize.x) / (cardsCount - 1) : cardSize.x + gap;
+
+			sf::Vector2f start = _position - dir * 0.5f * (std::min(maxWidth, cardsWidth) - cardSize.x);
+			uint8_t i = 0;
+			_cards.for_each([&](VisibleCard& visibleCard)
+				{
+					visibleCard.ResetAnimation();
+					Animation animation;
+					animation.finalState.position = start + dir * offset * static_cast<float>(i);
+					animation.finalState.angleDegree = angleDegree({ 0.f, -1.f }, _faceDirection);
+					visibleCard.StartAnimation(animation);
+					++i;
+					return false;
+				});
 		}
 
 	private:
@@ -369,10 +418,9 @@ namespace
 	public:
 		using PlayerCards::PlayerCards;
 
-	private:
-		void onCardAdded(VisibleCard& cardAdded) override
+		bool IsOpen() const override
 		{
-			cardAdded.SetOpen(true);
+			return true;
 		}
 	};
 

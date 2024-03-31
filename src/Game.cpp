@@ -66,7 +66,7 @@ void Game::Run()
 	auto ui = std::make_shared<UI>("durak", 500, 500);
 	EventHandlers::Get().Add(ui);
 
-	auto context = std::make_shared<Context>(ui, 2);
+	auto context = std::make_shared<Context>(ui, 1);
 
 	ui->GetWindow().setActive(false);
 	std::thread render(&UILoop, context);

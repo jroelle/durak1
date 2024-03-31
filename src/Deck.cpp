@@ -63,3 +63,8 @@ size_t Deck::GetCount() const
 {
 	return _queue.size();
 }
+
+size_t Deck::GetMaxCount()
+{
+	return static_cast<size_t>(Card::Suit::Count) * (static_cast<size_t>(Card::Rank::Max) - static_cast<size_t>(Card::Rank::Min) + 1);
+}

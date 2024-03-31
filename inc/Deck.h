@@ -12,6 +12,7 @@ public:
 	std::optional<Card> GetLast() const;
 	std::optional<Card> PopFirst();
 	size_t GetCount() const;
+	static size_t GetMaxCount();
 
 private:
 	std::queue<Card> _queue;
