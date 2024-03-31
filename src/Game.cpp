@@ -68,7 +68,7 @@ void Game::Run()
 
 	auto context = std::make_shared<Context>(ui, 1);
 
-	std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+	//std::this_thread::sleep_for(std::chrono::milliseconds(5000));
 
 	ui->GetWindow().setActive(false);
 	std::thread render(&UILoop, context);
@@ -93,7 +93,7 @@ void Game::Run()
 			ui->HandleEvent(event);
 		}
 
-		if (!ui->IsLocked())
+		if (!ui->IsLocked() && round)
 			round = round->Run();
 	}
 }

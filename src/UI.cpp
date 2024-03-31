@@ -97,7 +97,7 @@ namespace
 		using OnFinish = std::function<void()>;
 
 		State finalState;
-		sf::Int32 timeMs = 5000;
+		sf::Int32 timeMs = 2000;
 		OnStart onStart;
 		OnFinish onFinish;
 	};
@@ -415,7 +415,7 @@ namespace
 					visibleCard.ResetAnimation();
 					Animation animation;
 					animation.finalState.position = start + dir * offset * static_cast<float>(i);
-					animation.finalState.angleDegree = angleDegree({ 0.f, -1.f }, _faceDirection);
+					animation.finalState.angleDegree = angleDegree({ 0.f, -1.f }, _faceDirection); // TODO: rotating around wrong center
 					visibleCard.StartAnimation(animation);
 					++i;
 					return false;
@@ -449,7 +449,7 @@ namespace
 			switch (botsNumber)
 			{
 			case 2:
-				_players.push_back(std::make_unique<PlayerCards>(view, sf::Vector2f{ 0.f, 0.5f * view.getSize().y }, sf::Vector2f{ 1.f, 0.f }));
+				_players.push_back(std::make_unique<PlayerCards>(view, sf::Vector2f{ 0.f, 0.5f * view.getSize().y}, sf::Vector2f{ 1.f, 0.f }));
 				[[fallthrough]];
 
 			case 1:
