@@ -1,6 +1,7 @@
 #include "UI.h"
 #include <queue>
 #include <set>
+#include <numbers>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include "Utility.hpp"
 #include "Drawing.h"
@@ -24,10 +25,15 @@ namespace
 		return a.x * b.x + a.y * b.y;
 	}
 
-	inline float angle(const sf::Vector2f& a, const sf::Vector2f& b)
+	inline float angleDegree(const sf::Vector2f& a, const sf::Vector2f& b)
 	{
 		const float cos = dotProduct(a, b) / (length(a) * length(b));
-		return std::acos(cos);
+		return std::acos(cos) * 180.f / std::numbers::pi_v<float>;
+	}
+
+	inline sf::Vector2f rotate(const sf::Vector2f& v, float angleDegree)
+	{
+		return sf::Vector2f{ v.x * std::cos(angleDegree * std::numbers::pi_v<float> / 180.f), v.y * std::sin(angleDegree * std::numbers::pi_v<float> / 180.f) };
 	}
 
 	inline sf::Vector2f getCardSize()
@@ -85,7 +91,7 @@ namespace
 		using OnFinish = std::function<void()>;
 
 		State finalState;
-		sf::Int32 timeMs = 500;
+		sf::Int32 timeMs = 2000;
 		OnFinish onFinish;
 	};
 
@@ -343,8 +349,8 @@ namespace
 		State getNewCardState() const override
 		{
 			State state;
-			state.position = _position;
-			state.angleDegree = angle({ 0.f, -1.f }, _faceDirection);
+			state.position = _position + static_cast<float>(_cards.size()) * 20.f * rotate(_faceDirection, 90.f);
+			state.angleDegree = angleDegree({ 0.f, -1.f }, _faceDirection);
 			return state;
 		}
 
@@ -550,13 +556,13 @@ std::optional<Card> UI::UserPickCard(const User& user)
 	bool skip = false;
 
 	_data->flags |= Data::Flag::PickingCard;
-	while (_data->flags & Data::Flag::PickingCard)
-	{
-		// ...
+	//while (_window.isOpen() && _data->flags & Data::Flag::PickingCard)
+	//{
+	//	// ...
 
-		if (card || skip)
-			break;
-	}
+	//	if (card || skip)
+	//		break;
+	//}
 	_data->flags &= ~Data::Flag::PickingCard;
 	return card;
 }
