@@ -93,10 +93,12 @@ namespace
 
 	struct Animation
 	{
+		using OnStart = std::function<void()>;
 		using OnFinish = std::function<void()>;
 
 		State finalState;
 		sf::Int32 timeMs = 5000;
+		OnStart onStart;
 		OnFinish onFinish;
 	};
 
@@ -121,9 +123,16 @@ namespace
 			else
 				screenCard = std::make_unique<Screen::CloseCard>();
 
+			bool hasAnimations = !_animations.empty();
 			if (!_animations.empty())
 			{
 				auto& animation = _animations.front();
+				if (animation.onStart)
+				{
+					animation.onStart();
+					animation.onStart = {};
+				}
+
 				sf::Vector2f dir = animation.finalState.position - _state.position;
 				dir /= static_cast<float>(msDelta);
 
@@ -149,7 +158,7 @@ namespace
 			screenCard->setRotation(_state.angleDegree);
 			target.draw(*screenCard);
 
-			return _animations.empty();
+			return !hasAnimations;
 		}
 
 		void StartAnimation(const Animation& animation)
@@ -165,6 +174,11 @@ namespace
 		const State& GetState() const
 		{
 			return _state;
+		}
+
+		const State& GetFinalState() const
+		{
+			return _animations.empty() ? _state : _animations.back().finalState;
 		}
 
 		const ::Card& GetCardInfo() const
@@ -333,12 +347,12 @@ namespace
 		void ShowCard(const Card& cardInfo)
 		{
 			auto& visibleCard = _cards.at(cardInfo);
-			const auto& state = visibleCard.GetState();
+			const auto& state = visibleCard.GetFinalState();
 			{
 				Animation animation;
-				animation.finalState.position = state.position + 5.f * _faceDirection;
+				animation.finalState.position = state.position + 50.f * _faceDirection;
 				animation.finalState.angleDegree = state.angleDegree;
-				animation.onFinish = [&]()
+				animation.onStart = [&]()
 					{
 						visibleCard.SetOpen(true);
 					};
