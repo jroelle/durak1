@@ -26,7 +26,7 @@ public:
 	sf::RenderWindow& GetWindow();
 	const sf::RenderWindow& GetWindow() const;
 	bool NeedsToUpdate() const;
-	void Update(const Context&, sf::Int32 msDelta);
+	void Update(const Context&, sf::Time delta);
 	bool HandleEvent(const sf::Event&);
 	bool IsLocked() const;
 	std::optional<Card> UserPickCard(const User&);

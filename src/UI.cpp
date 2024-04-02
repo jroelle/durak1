@@ -97,7 +97,7 @@ namespace
 		using OnFinish = std::function<void()>;
 
 		State finalState;
-		sf::Int32 timeMs = 2000;
+		sf::Time time = sf::milliseconds(2000);
 		OnStart onStart;
 		OnFinish onFinish;
 	};
@@ -115,7 +115,7 @@ namespace
 			_open = open;
 		}
 
-		bool Draw(sf::Int32 msDelta, sf::RenderTarget& target)
+		bool Draw(sf::Time delta, sf::RenderTarget& target)
 		{
 			std::unique_ptr<Screen::Card> screenCard;
 			if (_open)
@@ -134,17 +134,17 @@ namespace
 				}
 
 				sf::Vector2f dir = animation.finalState.position - _state.position;
-				dir /= static_cast<float>(msDelta);
+				dir /= static_cast<float>(delta.asMilliseconds());
 
 				float angleDelta = animation.finalState.angleDegree - _state.angleDegree;
-				angleDelta /= static_cast<float>(msDelta);
+				angleDelta /= static_cast<float>(delta.asMilliseconds());
 
 				_state.position += dir;
 				_state.angleDegree += angleDelta;
 
-				if (animation.timeMs > msDelta)
+				if (animation.time > delta)
 				{
-					animation.timeMs -= msDelta;
+					animation.time -= delta;
 				}
 				else
 				{
@@ -237,12 +237,12 @@ namespace
 			_cards.at(cardInfo).StartAnimation(animation);
 		}
 
-		bool Draw(sf::Int32 msDelta, sf::RenderTarget& target)
+		bool Draw(sf::Time delta, sf::RenderTarget& target)
 		{
 			bool res = true;
-			_cards.for_each([&res, msDelta, &target](VisibleCard& visibleCard)
+			_cards.for_each([&res, delta, &target](VisibleCard& visibleCard)
 				{
-					res = visibleCard.Draw(msDelta, target) && res;
+					res = visibleCard.Draw(delta, target) && res;
 					return false;
 				});
 			return res;
@@ -475,11 +475,11 @@ namespace
 			return *_players[id];
 		}
 
-		bool Draw(sf::Int32 msDelta, sf::RenderTarget& target)
+		bool Draw(sf::Time delta, sf::RenderTarget& target)
 		{
 			bool res = true;
 			for (auto& player : _players)
-				res = player->Draw(msDelta, target) && res;
+				res = player->Draw(delta, target) && res;
 			return res;
 		}
 
@@ -537,7 +537,7 @@ bool UI::NeedsToUpdate() const
 	return _data && _data->flags & Data::Flag::NeedRedraw;
 }
 
-void UI::Update(const Context& context, sf::Int32 msDelta)
+void UI::Update(const Context& context, sf::Time delta)
 {
 	if (!NeedsToUpdate())
 		return;
@@ -570,8 +570,8 @@ void UI::Update(const Context& context, sf::Int32 msDelta)
 	}
 
 	bool finished = true;
-	finished = _data->playerCards.Draw(msDelta, _window) && finished;
-	finished = _data->roundCards.Draw(msDelta, _window) && finished;
+	finished = _data->playerCards.Draw(delta, _window) && finished;
+	finished = _data->roundCards.Draw(delta, _window) && finished;
 
 	if (finished)
 		_data->flags &= ~Data::Flag::NeedRedraw;
