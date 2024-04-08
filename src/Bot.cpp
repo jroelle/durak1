@@ -2,6 +2,12 @@
 #include "Card.h"
 #include "Context.h"
 
+Bot::Bot(Id id, Difficulty difficulty)
+	: Player(id)
+	, _difficulty(difficulty)
+{
+}
+
 std::optional<Card> Bot::pickAttackCard(const Context& context) const
 {
 	// TODO
