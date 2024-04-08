@@ -110,10 +110,10 @@ namespace
 			return;
 
 		EventHandlers::Get().OnStartGame(*firstPlayer);
-		auto round = std::make_unique<Round>(context, *firstPlayer);
+		auto round = std::make_unique<Round>(*firstPlayer, context->GetPlayers().GetDefender(*firstPlayer));
 		while (round)
 		{
-			round = round->Run();
+			round = round->Run(*context);
 		}
 	}
 }
@@ -133,6 +133,7 @@ void Game::Run()
 		{
 			if (event.type == sf::Event::Closed)
 			{
+				std::lock_guard<std::mutex> guard(g_mutex);
 				window.close();
 				break;
 			}

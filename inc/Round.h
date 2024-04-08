@@ -15,17 +15,16 @@ public:
 	Round() = delete;
 	Round(const Round&) = delete;
 
-	Round(std::shared_ptr<Context>, Player& attacker);
+	Round(Player& attacker, Player& defender);
 	Round(Round&&) = default;
 
-	std::unique_ptr<Round> Run();
-	std::shared_ptr<Context> GetContext() const;
+	std::unique_ptr<Round> Run(Context&);
 	const Cards& GetCards() const;
 	Player& GetAttacker() const;
 	Player& GetDefender() const;
 
 private:
-	std::shared_ptr<Context> _context;
 	Player& _attacker;
+	Player& _defender;
 	Cards _cards;
 };

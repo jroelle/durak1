@@ -2,6 +2,7 @@
 #include <queue>
 #include <set>
 #include <numbers>
+#include <thread>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include "Utility.hpp"
 #include "Drawing.h"
@@ -81,14 +82,16 @@ namespace
 
 	struct State
 	{
+		static constexpr float tolerance = 1.e-2f;
+
 		sf::Vector2f position;
 		float angleDegree = 0.f;
 
 		bool operator==(const State& other) const
 		{
-			return std::abs(position.x - other.position.x) < eps
-				&& std::abs(position.y - other.position.y) < eps
-				&& std::abs(angleDegree - other.angleDegree) < eps;
+			return std::abs(position.x - other.position.x) < tolerance
+				&& std::abs(position.y - other.position.y) < tolerance
+				&& std::abs(angleDegree - other.angleDegree) < tolerance;
 		}
 	};
 
@@ -98,7 +101,7 @@ namespace
 		using OnFinish = std::function<void()>;
 
 		State finalState;
-		sf::Time time = sf::milliseconds(2000);
+		float deltaPerFrame = 25.f;
 		OnStart onStart;
 		OnFinish onFinish;
 	};
@@ -134,24 +137,23 @@ namespace
 					animation.onStart = {};
 				}
 
-				sf::Vector2f dir = animation.finalState.position - _state.position;
-				dir /= static_cast<float>(delta.asMilliseconds());
-
-				float angleDelta = animation.finalState.angleDegree - _state.angleDegree;
-				angleDelta /= static_cast<float>(delta.asMilliseconds());
-
-				_state.position += dir;
-				_state.angleDegree += angleDelta;
-
-				if (animation.time > delta)
+				if (_state == animation.finalState)
 				{
-					animation.time -= delta;
-				}
-				else
-				{
+					_state = animation.finalState;
 					if (animation.onFinish)
 						animation.onFinish();
 					_animations.pop();
+				}
+				else
+				{
+					sf::Vector2f dir = animation.finalState.position - _state.position;
+					dir /= animation.deltaPerFrame;
+
+					float angleDelta = animation.finalState.angleDegree - _state.angleDegree;
+					angleDelta /= animation.deltaPerFrame;
+
+					_state.position += dir;
+					_state.angleDegree += angleDelta;
 				}
 			}
 
@@ -647,6 +649,7 @@ void UI::OnPlayersCreated(const Context& context, const PlayersGroup& players)
 {
 	_data = std::make_unique<Data>(_window.getView(), players.GetCount() - 1);
 	animate(context);
+	std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 }
 
 void UI::OnStartGame(const Context& context, const Player& first)
@@ -702,7 +705,7 @@ void UI::animate(const Context& context)
 {
 	sf::Clock clock;
 	_data->flags |= Data::Flag::NeedRedraw;
-	while (_data->flags & Data::Flag::NeedRedraw)
+	while (NeedsToUpdate())
 	{
 		_window.clear();
 		update(context, clock.restart());

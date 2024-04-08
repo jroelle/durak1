@@ -8,34 +8,37 @@
 
 namespace
 {
-	inline bool playerHasAnyCards(const Player* player)
+	inline bool hasAnyCards(const Player* player)
 	{
 		return !player->GetHand().IsEmpty();
 	}
+
+	inline bool hasNoCards(const Player* player)
+	{
+		return !hasAnyCards(player);
+	}
 }
 
-Round::Round(std::shared_ptr<Context> context, Player& attacker)
-	: _context(context)
-	, _attacker(attacker)
+Round::Round(Player& attacker, Player& defender)
+	: _attacker(attacker)
+	, _defender(defender)
 {
 }
 
-std::unique_ptr<Round> Round::Run()
+std::unique_ptr<Round> Round::Run(Context& context)
 {
-	auto& players = _context->GetPlayers();
-	auto& defender = players.GetDefender(_attacker);
-
+	_cards = {};
+	auto& players = context.GetPlayers();
 	EventHandlers::Get().OnRoundStart(*this);
 
-	_cards = {};
 	_cards.reserve(MaxAttacksCount * 2);
 	for (size_t attackIndex = 0; attackIndex < MaxAttacksCount; ++attackIndex)
 	{
 		std::optional<Card> attackCard;
 		Player* attackerPickedCard = nullptr;
-		players.ForEachAttackPlayer([this, &attackCard, &attackerPickedCard](Player* attackPlayer)
+		players.ForEachAttackPlayer([&](Player* attackPlayer)
 			{
-				attackCard = attackPlayer->Attack(*_context);
+				attackCard = attackPlayer->Attack(context);
 				attackerPickedCard = attackPlayer;
 				return attackCard.has_value();
 			}, &_attacker);
@@ -43,13 +46,13 @@ std::unique_ptr<Round> Round::Run()
 		if (attackCard)
 		{
 			_cards.push_back(*attackCard);
-			if (const auto defendCard = defender.Defend(*_context, *attackCard))
+			if (const auto defendCard = _defender.Defend(context, *attackCard))
 			{
 				_cards.push_back(*defendCard);
 			}
 			else
 			{
-				defender.DrawCards(std::move(_cards));
+				_defender.DrawCards(std::move(_cards));
 				break;
 			}
 		}
@@ -60,34 +63,28 @@ std::unique_ptr<Round> Round::Run()
 
 	const auto drawCards = [&](Player* player)
 		{
-			player->DrawCards(_context->GetDeck());
-			return _context->GetDeck().IsEmpty();
+			player->DrawCards(context.GetDeck());
+			return context.GetDeck().IsEmpty();
 		};
 
 	players.ForEachAttackPlayer(drawCards, &_attacker);
-	drawCards(&defender);
+	drawCards(&_defender);
 
 	const auto* user = players.GetUser();
-	if (!playerHasAnyCards(user))
+	if (hasNoCards(user))
 	{
 		EventHandlers::Get().OnUserWin(*user);
 		return nullptr;
 	}
 
-	if (_context->GetDeck().IsEmpty() && !players.ForEachOtherPlayer(playerHasAnyCards, user))
+	if (context.GetDeck().IsEmpty() && players.ForEachOtherPlayer(hasNoCards, user))
 	{
 		EventHandlers::Get().OnUserLose(*players.GetUser());
 		return nullptr;
 	}
 
-	players.RemoveIf(playerHasAnyCards);
-	return std::make_unique<Round>(_context, defender);
-}
-
-
-std::shared_ptr<Context> Round::GetContext() const
-{
-	return _context;
+	players.RemoveIf(hasNoCards);
+	return std::make_unique<Round>(_defender, players.GetDefender(_defender));
 }
 
 const Round::Cards& Round::GetCards() const
@@ -102,5 +99,5 @@ Player& Round::GetAttacker() const
 
 Player& Round::GetDefender() const
 {
-	return _context->GetPlayers().GetDefender(_attacker);
+	return _defender;
 }
