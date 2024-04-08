@@ -1,14 +1,19 @@
 #include "Context.h"
+#include "PlayersGroup.h"
 #include "Player.h"
-#include "UI.h"
+#include "Event.hpp"
 
-Context::Context(std::weak_ptr<UI> ui, size_t botsNumber)
+Context::Context(std::weak_ptr<UI> ui)
 	: _ui(ui)
-	, _players(botsNumber)
 {
-	EventHandlers::Get().OnPlayersCreated(_players);
+}
+
+void Context::Setup(size_t botsNumber)
+{
+	_players = std::make_unique<PlayersGroup>(botsNumber);
+	EventHandlers::Get().OnPlayersCreated(*_players);
 	_trumpSuit = _deck.GetLast()->GetSuit();
-	_players.DrawCards(_deck, _players.GetUser());
+	_players->DrawCards(_deck, _players->GetUser());
 }
 
 Deck& Context::GetDeck()
@@ -28,7 +33,7 @@ PlayersGroup& Context::GetPlayers()
 
 const PlayersGroup& Context::GetPlayers() const
 {
-	return _players;
+	return *_players;
 }
 
 Card::Suit Context::GetTrumpSuit() const

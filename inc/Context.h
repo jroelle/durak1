@@ -1,12 +1,13 @@
 #pragma once
+#include <memory>
 #include <optional>
 #include <unordered_map>
 #include <list>
 #include "Deck.h"
-#include "PlayersGroup.h"
 #include "Card.h"
 
 class UI;
+class PlayersGroup;
 
 class Context
 {
@@ -14,7 +15,9 @@ public:
 	using RoundCards = std::vector<Card>;
 
 	Context() = delete;
-	Context(std::weak_ptr<UI>, size_t botsNumber = 1);
+	Context(std::weak_ptr<UI>);
+
+	void Setup(size_t botsNumber = 1);
 
 	Deck& GetDeck();
 	const Deck& GetDeck() const;
@@ -27,7 +30,7 @@ public:
 
 private:
 	Deck _deck;
-	PlayersGroup _players;
+	std::unique_ptr<PlayersGroup> _players;
 	Card::Suit _trumpSuit;
 	std::weak_ptr<UI> _ui;
 };

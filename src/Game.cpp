@@ -1,14 +1,17 @@
 #include "Game.h"
+#include <mutex>
 #include <thread>
 #include <SFML/System/Clock.hpp>
 #include "Context.h"
 #include "Round.h"
 #include "UI.h"
-#include "Mutex.h"
 #include "Event.hpp"
+#include "PlayersGroup.h"
 
 namespace
 {
+	std::mutex g_mutex;
+
 	inline Player* findFirstPlayer(const PlayersGroup& players, Card::Suit trumpSuit)
 	{
 		std::optional<std::pair<Player*, Card>> firstPlayer;
@@ -25,38 +28,92 @@ namespace
 		return firstPlayer ? firstPlayer->first : players.GetUser();
 	}
 
-	inline void UILoop(std::weak_ptr<Context> context)
+	class GameEventHandler final : public EventHandler
 	{
-		constexpr unsigned int framerate = 60;
-		if (auto ui = context.lock()->GetUI())
+	public:
+		GameEventHandler(std::weak_ptr<Context> context)
+			: _context(context)
 		{
+			EventHandlers::Get().Add(this);
+		}
+
+		void OnPlayerAttack(const Player& player, const Card& card)
+		{
+			callUI([&](UI& ui, const Context& context) { ui.OnPlayerAttack(context, player, card); });
+		}
+		void OnPlayerDefend(const Player& player, const Card& card)
+		{
+			callUI([&](UI& ui, const Context& context) { ui.OnPlayerDefend(context, player, card); });
+		}
+		void OnPlayerDrawDeckCards(const Player& player, const std::vector<Card>& cards)
+		{
+			callUI([&](UI& ui, const Context& context) { ui.OnPlayerDrawDeckCards(context, player, cards); });
+		}
+		void OnPlayerDrawRoundCards(const Player& player, const std::vector<Card>& cards)
+		{
+			callUI([&](UI& ui, const Context& context) { ui.OnPlayerDrawDeckCards(context, player, cards); });
+		}
+		void OnRoundStart(const Round& round)
+		{
+			callUI([&](UI& ui, const Context& context) { ui.OnRoundStart(context, round); });
+		}
+		void OnRoundEnd(const Round& round)
+		{
+			callUI([&](UI& ui, const Context& context) { ui.OnRoundEnd(context, round); });
+		}
+		void OnPlayersCreated(const PlayersGroup& players)
+		{
+			callUI([&](UI& ui, const Context& context) { ui.OnPlayersCreated(context, players); });
+		}
+		void OnStartGame(const Player& first)
+		{
+			callUI([&](UI& ui, const Context& context) { ui.OnStartGame(context, first); });
+		}
+		void OnUserWin(const Player& user)
+		{
+			callUI([&](UI& ui, const Context& context) { ui.OnUserWin(context, user); });
+		}
+		void OnUserLose(const Player& opponent)
+		{
+			callUI([&](UI& ui, const Context& context) { ui.OnUserLose(context, opponent); });
+		}
+
+	private:
+		template<typename T>
+		void callUI(const T& callback)
+		{
+			auto actualContext = _context.lock();
+			if (auto ui = actualContext ? actualContext->GetUI() : nullptr)
+				callback(*ui, *actualContext);
+		}
+
+	private:
+		std::weak_ptr<Context> _context;
+	};
+
+	inline void gameLoop(std::shared_ptr<UI> ui)
+	{
+		{
+			constexpr unsigned int framerate = 60;
+
 			auto& window = ui->GetWindow();
-			window.setFramerateLimit(framerate);
 			window.setActive(true);
+			window.setFramerateLimit(framerate);
 		}
-		sf::Clock clock;
-		while (!context.expired() && context.lock()->GetUI() && context.lock()->GetUI()->GetWindow().isOpen())
-		{
-			auto ctx = context.lock();
-			auto ui = ctx ? ctx->GetUI() : nullptr;
-			if (ui && ui->NeedsToUpdate())
-			{
-				ui->GetWindow().clear();
-				ui->Update(*ctx, clock.restart());
-				ui->GetWindow().display();
-			}
-			//std::this_thread::sleep_for(std::chrono::milliseconds(1000 / framerate));
-		}
-	}
-	inline void logicLoop(std::shared_ptr<Context> context)
-	{
+
+		auto context = std::make_shared<Context>(ui);
+		GameEventHandler gameEventHandler(context);
+		context->Setup(1);
+
 		Player* firstPlayer = findFirstPlayer(context->GetPlayers(), context->GetTrumpSuit());
-		EventHandlers::Get().OnStartGame(*firstPlayer, *context);
-		auto round = std::make_unique<Round>(context, firstPlayer);
+		if (!firstPlayer)
+			return;
+
+		EventHandlers::Get().OnStartGame(*firstPlayer);
+		auto round = std::make_unique<Round>(context, *firstPlayer);
 		while (round)
 		{
-			if (context->GetUI() && !context->GetUI()->IsLocked())
-				round = round->Run();
+			round = round->Run();
 		}
 	}
 }
@@ -64,21 +121,10 @@ namespace
 void Game::Run()
 {
 	auto ui = std::make_shared<UI>("durak", 500, 500);
-	EventHandlers::Get().Add(ui);
-
-	auto context = std::make_shared<Context>(ui, 1);
-
-	//std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-
 	ui->GetWindow().setActive(false);
-	std::thread render(&UILoop, context);
-	render.detach();
 
-	//std::thread logic(&logicLoop, context);
-	//logic.detach();
-	Player* firstPlayer = findFirstPlayer(context->GetPlayers(), context->GetTrumpSuit());
-	EventHandlers::Get().OnStartGame(*firstPlayer, *context);
-	auto round = std::make_unique<Round>(context, firstPlayer);
+	std::thread game(&gameLoop, ui);
+	game.detach();
 
 	while (ui->GetWindow().isOpen())
 	{
@@ -90,10 +136,11 @@ void Game::Run()
 				window.close();
 				break;
 			}
-			ui->HandleEvent(event);
-		}
 
-		if (!ui->IsLocked() && round)
-			round = round->Run();
+			{
+				std::lock_guard<std::mutex> guard(g_mutex);
+				ui->HandleEvent(event);
+			}
+		}
 	}
 }

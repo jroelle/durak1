@@ -12,11 +12,11 @@ public:
 	~PlayersGroup();
 	void DrawCards(Deck&, Player* start = nullptr);
 
-	Player* Next(const Player*) const;
+	Player& Next(const Player&) const;
 	Player* GetUser() const;
 	size_t GetCount() const;
 
-	Player* GetDefender(const Player* attacker) const;
+	Player& GetDefender(const Player& attacker) const;
 
 	using RemoveIfCallback = std::function<bool(const Player*)>;
 	void RemoveIf(const RemoveIfCallback&);

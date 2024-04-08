@@ -25,9 +25,9 @@ public:
 	virtual void OnRoundEnd(const Round&) {}
 
 	virtual void OnPlayersCreated(const PlayersGroup&) {}
-	virtual void OnStartGame(const Player& first, const Context&) {}
-	virtual void OnUserWin(const Player& user, const Context&) {}
-	virtual void OnUserLose(const Player& opponent, const Context&) {}
+	virtual void OnStartGame(const Player& first) {}
+	virtual void OnUserWin(const Player& user) {}
+	virtual void OnUserLose(const Player& opponent) {}
 };
 
 class EventHandlers final : public EventHandler
@@ -75,17 +75,17 @@ public:
 	{
 		forEach([&](EventHandler* handler) { handler->OnPlayersCreated(players); });
 	}
-	void OnStartGame(const Player& first, const Context& context) override
+	void OnStartGame(const Player& first) override
 	{
-		forEach([&](EventHandler* handler) { handler->OnStartGame(first, context); });
+		forEach([&](EventHandler* handler) { handler->OnStartGame(first); });
 	}
-	void OnUserWin(const Player& user, const Context& context) override
+	void OnUserWin(const Player& user) override
 	{
-		forEach([&](EventHandler* handler) { handler->OnUserWin(user, context); });
+		forEach([&](EventHandler* handler) { handler->OnUserWin(user); });
 	}
-	void OnUserLose(const Player& opponent, const Context& context) override
+	void OnUserLose(const Player& opponent) override
 	{
-		forEach([&](EventHandler* handler) { handler->OnUserLose(opponent, context); });
+		forEach([&](EventHandler* handler) { handler->OnUserLose(opponent); });
 	}
 
 private:

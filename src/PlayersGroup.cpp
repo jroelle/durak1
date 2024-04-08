@@ -24,9 +24,9 @@ void PlayersGroup::DrawCards(Deck& deck, Player* start)
 		}, start);
 }
 
-Player* PlayersGroup::Next(const Player* player) const
+Player& PlayersGroup::Next(const Player& player) const
 {
-	return player ? _playerLoop.next(player) : nullptr;
+	return *_playerLoop.next(&player);
 }
 
 Player* PlayersGroup::GetUser() const
@@ -39,7 +39,7 @@ size_t PlayersGroup::GetCount() const
 	return _playerLoop.size();
 }
 
-Player* PlayersGroup::GetDefender(const Player* attacker) const
+Player& PlayersGroup::GetDefender(const Player& attacker) const
 {
 	return Next(attacker);
 }
@@ -71,7 +71,7 @@ bool PlayersGroup::ForEachIdlePlayer(const ForEachCallback& callback, const Play
 		return false;
 
 	bool result = false;
-	_playerLoop.for_each(Next(GetDefender(attacker)), [&](Player* player)
+	_playerLoop.for_each(&Next(GetDefender(*attacker)), [&](Player* player)
 		{
 			result = callback(player);
 			return result || attacker->GetId() == player->GetId();
@@ -81,7 +81,7 @@ bool PlayersGroup::ForEachIdlePlayer(const ForEachCallback& callback, const Play
 
 bool PlayersGroup::ForEachAttackPlayer(const ForEachCallback& callback, const Player* attacker)
 {
-	return ForEachOtherPlayer(callback, GetDefender(attacker), attacker);
+	return attacker && ForEachOtherPlayer(callback, &GetDefender(*attacker), attacker);
 }
 
 bool PlayersGroup::ForEachOtherPlayer(const ForEachCallback& callback, const Player* exclude, const Player* start) const

@@ -4,6 +4,7 @@
 #include "Player.h"
 #include "UI.h"
 #include "Event.hpp"
+#include "PlayersGroup.h"
 
 namespace
 {
@@ -13,7 +14,7 @@ namespace
 	}
 }
 
-Round::Round(std::shared_ptr<Context> context, Player* attacker)
+Round::Round(std::shared_ptr<Context> context, Player& attacker)
 	: _context(context)
 	, _attacker(attacker)
 {
@@ -22,11 +23,7 @@ Round::Round(std::shared_ptr<Context> context, Player* attacker)
 std::unique_ptr<Round> Round::Run()
 {
 	auto& players = _context->GetPlayers();
-
-	auto* attacker = _attacker;
-	auto* defender = players.GetDefender(attacker);
-	if (!attacker || !defender)
-		return nullptr;
+	auto& defender = players.GetDefender(_attacker);
 
 	EventHandlers::Get().OnRoundStart(*this);
 
@@ -41,18 +38,18 @@ std::unique_ptr<Round> Round::Run()
 				attackCard = attackPlayer->Attack(*_context);
 				attackerPickedCard = attackPlayer;
 				return attackCard.has_value();
-			}, attacker);
+			}, &_attacker);
 
 		if (attackCard)
 		{
 			_cards.push_back(*attackCard);
-			if (const auto defendCard = defender->Defend(*_context, *attackCard))
+			if (const auto defendCard = defender.Defend(*_context, *attackCard))
 			{
 				_cards.push_back(*defendCard);
 			}
 			else
 			{
-				defender->DrawCards(std::move(_cards));
+				defender.DrawCards(std::move(_cards));
 				break;
 			}
 		}
@@ -67,19 +64,19 @@ std::unique_ptr<Round> Round::Run()
 			return _context->GetDeck().IsEmpty();
 		};
 
-	players.ForEachAttackPlayer(drawCards, attacker);
-	drawCards(defender);
+	players.ForEachAttackPlayer(drawCards, &_attacker);
+	drawCards(&defender);
 
 	const auto* user = players.GetUser();
 	if (!playerHasAnyCards(user))
 	{
-		EventHandlers::Get().OnUserWin(*user, *_context);
+		EventHandlers::Get().OnUserWin(*user);
 		return nullptr;
 	}
 
 	if (_context->GetDeck().IsEmpty() && !players.ForEachOtherPlayer(playerHasAnyCards, user))
 	{
-		EventHandlers::Get().OnUserLose(*players.GetUser(), *_context);
+		EventHandlers::Get().OnUserLose(*players.GetUser());
 		return nullptr;
 	}
 
@@ -96,4 +93,14 @@ std::shared_ptr<Context> Round::GetContext() const
 const Round::Cards& Round::GetCards() const
 {
 	return _cards;
+}
+
+Player& Round::GetAttacker() const
+{
+	return _attacker;
+}
+
+Player& Round::GetDefender() const
+{
+	return _context->GetPlayers().GetDefender(_attacker);
 }

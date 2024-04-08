@@ -1,6 +1,6 @@
 #pragma once
 
-class Game
+class Game final
 {
 public:
 	void Run();

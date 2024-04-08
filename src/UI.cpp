@@ -7,9 +7,10 @@
 #include "Drawing.h"
 #include "Color.h"
 #include "Hand.h"
-#include "Mutex.h"
 #include "Context.h"
 #include "Round.h"
+#include "Player.h"
+#include "PlayersGroup.h"
 
 namespace
 {
@@ -382,6 +383,11 @@ namespace
 			return false;
 		}
 
+		const sf::Vector2f& GetPosition() const
+		{
+			return _position;
+		}
+
 	private:
 		void onCardAdded(VisibleCard& cardAdded) override
 		{
@@ -537,57 +543,11 @@ bool UI::NeedsToUpdate() const
 	return _data && _data->flags & Data::Flag::NeedRedraw;
 }
 
-void UI::Update(const Context& context, sf::Time delta)
-{
-	if (!NeedsToUpdate())
-		return;
-
-	Mutex::Guard guard(Mutex::Get());
-
-	constexpr float interactOffset = 2.5f;
-	const auto size = _window.getView().getSize();
-	sf::Cursor::Type cursorType = sf::Cursor::Arrow;
-
-	{
-		Screen::Table table;
-		_window.draw(table);
-	}
-
-	{
-		Screen::Deck deck(context.GetDeck());
-		deck.setOrigin(getDeckPosition());
-		_window.draw(deck);
-	}
-
-	if (_data->flags & Data::Flag::PickingCard)
-	{
-		Screen::SkipButton skipButton;
-		const sf::Vector2f center(0.5f * size.x, size.y - Screen::Card{}.getSize().y);
-		skipButton.setOrigin(center);
-		_window.draw(skipButton);
-		if (isPointInRectange(center, Screen::SkipButton::Size, Screen::SkipButton::Size, _data->cursorPosition, interactOffset))
-			cursorType = sf::Cursor::Hand;
-	}
-
-	bool finished = true;
-	finished = _data->playerCards.Draw(delta, _window) && finished;
-	finished = _data->roundCards.Draw(delta, _window) && finished;
-
-	if (finished)
-		_data->flags &= ~Data::Flag::NeedRedraw;
-
-	if (_cursorType != cursorType)
-	{
-		_cursorType = cursorType;
-		sf::Cursor cursor;
-		cursor.loadFromSystem(cursorType);
-		_window.setMouseCursor(cursor);
-	}
-}
-
 bool UI::HandleEvent(const sf::Event& event)
 {
-	Mutex::Guard guard(Mutex::Get());
+	if (!_data)
+		return false;
+
 	switch (event.type)
 	{
 	case sf::Event::EventType::MouseButtonPressed:
@@ -635,17 +595,17 @@ std::optional<Card> UI::UserPickCard(const User& user)
 	return card;
 }
 
-void UI::OnPlayerAttack(const Player& attacker, const Card& attackCard)
+void UI::OnPlayerAttack(const Context& context, const Player& attacker, const Card& attackCard)
 {
-	onPlayerPlaceCard(attacker, attackCard);
+	onPlayerPlaceCard(context, attacker, attackCard);
 }
 
-void UI::OnPlayerDefend(const Player& defender, const Card& defendCard)
+void UI::OnPlayerDefend(const Context& context, const Player& defender, const Card& defendCard)
 {
-	onPlayerPlaceCard(defender, defendCard);
+	onPlayerPlaceCard(context, defender, defendCard);
 }
 
-void UI::OnPlayerDrawDeckCards(const Player& player, const std::vector<Card>& cards)
+void UI::OnPlayerDrawDeckCards(const Context& context, const Player& player, const std::vector<Card>& cards)
 {
 	PlayerCards& playerCards = _data->playerCards.GetCards(player.GetId());
 	const sf::Vector2f startPosition = getDeckPosition();
@@ -653,37 +613,43 @@ void UI::OnPlayerDrawDeckCards(const Player& player, const std::vector<Card>& ca
 	{
 		playerCards.Add(VisibleCard(cardInfo, State{ startPosition, 0.f }));
 	}
-	awaitUpdate();
+	animate(context);
 }
 
-void UI::OnPlayerDrawRoundCards(const Player& player, const std::vector<Card>& cards)
+void UI::OnPlayerDrawRoundCards(const Context& context, const Player& player, const std::vector<Card>& cards)
 {
 	PlayerCards& playerCards = _data->playerCards.GetCards(player.GetId());
 	for (const auto& cardInfo : cards)
 	{
 		playerCards.MoveFrom(cardInfo, _data->roundCards);
 	}
-	awaitUpdate();
+	animate(context);
 }
 
-void UI::OnRoundStart(const Round& round)
+void UI::OnRoundStart(const Context& context, const Round& round)
 {
-	awaitUpdate();
+	const auto& attackerCards = _data->playerCards.GetCards(round.GetAttacker().GetId());
+	const auto& defenderCards = _data->playerCards.GetCards(round.GetDefender().GetId());
+	const sf::Vector2f& arrowStart = attackerCards.GetPosition();
+	const sf::Vector2f& arrowEnd = defenderCards.GetPosition();
+	// TODO: draw attacker to defender arrow
+
+	animate(context);
 }
 
-void UI::OnRoundEnd(const Round& round)
+void UI::OnRoundEnd(const Context& context, const Round& round)
 {
 	_data->roundCards.RemoveAll();
-	awaitUpdate();
+	animate(context);
 }
 
-void UI::OnPlayersCreated(const PlayersGroup& players)
+void UI::OnPlayersCreated(const Context& context, const PlayersGroup& players)
 {
 	_data = std::make_unique<Data>(_window.getView(), players.GetCount() - 1);
-	awaitUpdate();
+	animate(context);
 }
 
-void UI::OnStartGame(const Player& first, const Context& context)
+void UI::OnStartGame(const Context& context, const Player& first)
 {
 	const PlayersGroup& players = context.GetPlayers();
 	const Card::Suit trumpSuit = context.GetTrumpSuit();
@@ -697,17 +663,17 @@ void UI::OnStartGame(const Player& first, const Context& context)
 			return false;
 
 		}, players.GetUser());
-	awaitUpdate();
+	animate(context);
 }
 
-void UI::OnUserWin(const Player& user, const Context& context)
+void UI::OnUserWin(const Context& context, const Player& user)
 {
-	awaitUpdate();
+	animate(context);
 }
 
-void UI::OnUserLose(const Player& opponent, const Context& context)
+void UI::OnUserLose(const Context& context, const Player& opponent)
 {
-	awaitUpdate();
+	animate(context);
 }
 
 sf::Vector2f UI::toModel(const sf::Vector2i& screen) const
@@ -720,10 +686,10 @@ sf::Vector2i UI::toScreen(const sf::Vector2f& model) const
 	return _window.mapCoordsToPixel(model);
 }
 
-void UI::onPlayerPlaceCard(const Player& player, const Card& card)
+void UI::onPlayerPlaceCard(const Context& context, const Player& player, const Card& card)
 {
 	_data->roundCards.MoveFrom(card, _data->playerCards.GetCards(player.GetId()));
-	awaitUpdate();
+	animate(context);
 }
 
 sf::Vector2f UI::getDeckPosition() const
@@ -732,11 +698,60 @@ sf::Vector2f UI::getDeckPosition() const
 	return { 0.9f * size.x, 0.5f * size.y };
 }
 
-void UI::awaitUpdate()
+void UI::animate(const Context& context)
 {
+	sf::Clock clock;
 	_data->flags |= Data::Flag::NeedRedraw;
-	//while (_data->flags & Data::Flag::NeedRedraw)
-	//{
-	//	// updating in another thread
-	//}
+	while (_data->flags & Data::Flag::NeedRedraw)
+	{
+		_window.clear();
+		update(context, clock.restart());
+		_window.display();
+	}
+}
+
+void UI::update(const Context& context, sf::Time delta)
+{
+	if (!NeedsToUpdate())
+		return;
+
+	constexpr float interactOffset = 2.5f;
+	const auto size = _window.getView().getSize();
+	sf::Cursor::Type cursorType = sf::Cursor::Arrow;
+
+	{
+		Screen::Table table;
+		_window.draw(table);
+	}
+
+	{
+		Screen::Deck deck(context.GetDeck());
+		deck.setOrigin(getDeckPosition());
+		_window.draw(deck);
+	}
+
+	if (_data->flags & Data::Flag::PickingCard)
+	{
+		Screen::SkipButton skipButton;
+		const sf::Vector2f center(0.5f * size.x, size.y - Screen::Card{}.getSize().y);
+		skipButton.setOrigin(center);
+		_window.draw(skipButton);
+		if (isPointInRectange(center, Screen::SkipButton::Size, Screen::SkipButton::Size, _data->cursorPosition, interactOffset))
+			cursorType = sf::Cursor::Hand;
+	}
+
+	bool finished = true;
+	finished = _data->playerCards.Draw(delta, _window) && finished;
+	finished = _data->roundCards.Draw(delta, _window) && finished;
+
+	if (finished)
+		_data->flags &= ~Data::Flag::NeedRedraw;
+
+	if (_cursorType != cursorType)
+	{
+		_cursorType = cursorType;
+		sf::Cursor cursor;
+		cursor.loadFromSystem(cursorType);
+		_window.setMouseCursor(cursor);
+	}
 }
