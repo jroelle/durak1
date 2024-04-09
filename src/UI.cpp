@@ -1,7 +1,5 @@
 #include "UI.h"
 #include <queue>
-#include <set>
-#include <numbers>
 #include <thread>
 #include <SFML/Graphics/RenderWindow.hpp>
 #include "Utility.hpp"
@@ -12,37 +10,10 @@
 #include "Round.h"
 #include "Player.h"
 #include "PlayersGroup.h"
+#include "Vector.h"
 
 namespace
 {
-	constexpr float eps = 1.e-5f;
-
-	inline float length(const sf::Vector2f& v)
-	{
-		return std::hypot(v.x, v.y);
-	}
-
-	inline float dotProduct(const sf::Vector2f& a, const sf::Vector2f& b)
-	{
-		return a.x * b.x + a.y * b.y;
-	}
-
-	inline float angleDegree(const sf::Vector2f& a, const sf::Vector2f& b, float max = 360.f)
-	{
-		const float cos = dotProduct(a, b) / (length(a) * length(b));
-		const float angle = std::acos(cos) * 180.f / std::numbers::pi_v<float>;
-		const float remains = angle / max - std::trunc(angle / max);
-		return remains * max;
-	}
-
-	inline sf::Vector2f rotate(const sf::Vector2f& v, float angleDegree)
-	{
-		const float cos = std::cos(angleDegree * std::numbers::pi_v<float> / 180.f);
-		const float sin = std::sin(angleDegree * std::numbers::pi_v<float> / 180.f);
-
-		return sf::Vector2f{ v.x * cos - v.y * sin, v.x * sin + v.y * cos };
-	}
-
 	inline sf::Vector2f getCardSize()
 	{
 		return Screen::Card{}.getSize();
@@ -192,7 +163,7 @@ namespace
 		bool IsPointInside(const sf::Vector2f& point, float interactOffset = 0.f) const
 		{
 			const auto cardSize = ::getCardSize();
-			return ::isPointInRectange(_state.position, cardSize.x, cardSize.y, point, interactOffset);
+			return ::isPointInRectange(GetFinalState().position, cardSize.x, cardSize.y, point, interactOffset);
 		}
 
 		bool HasAnimations() const
@@ -413,7 +384,7 @@ namespace
 			const auto& state = visibleCard.GetFinalState();
 			{
 				Animation animation;
-				animation.finalState.position = state.position + 50.f * _faceDirection;
+				animation.finalState.position = state.position + 200.f * _faceDirection;
 				animation.finalState.angleDegree = state.angleDegree;
 				animation.onStart = [&]()
 					{
@@ -565,7 +536,7 @@ namespace
 			if (!options)
 				return;
 
-			if (cardInfo)
+			if (cardInfo && (!_hoverCard || *_hoverCard != *cardInfo))
 			{
 				auto& visibleCard = _cards.at(*cardInfo);
 				const auto defaultState = getDefaultState(_cards.index_of(*cardInfo), options);
@@ -588,7 +559,6 @@ namespace
 				visibleCard.ResetAnimation();
 				visibleCard.StartAnimation(animation);
 			}
-
 			_hoverCard = cardInfo;
 		}
 
@@ -922,7 +892,7 @@ void UI::update(const Context& context, sf::Time delta)
 		if (canSkip)
 		{
 			Screen::SkipButton skipButton;
-			const sf::Vector2f center(0.5f * size.x, size.y - Screen::Card{}.getSize().y);
+			const sf::Vector2f center(0.5f * size.x, size.y - 1.5f * Screen::Card{}.getSize().y);
 			skipButton.setOrigin(center);
 			_window.draw(skipButton);
 
@@ -943,9 +913,8 @@ void UI::update(const Context& context, sf::Time delta)
 
 	if (_data->arrow)
 	{
-		Screen::Arrow arrow;
+		Screen::Arrow arrow(_data->arrow->direction);
 		arrow.setOrigin(0.5f * size);
-		arrow.setRotation(angleDegree({ 0.f, -1.f }, _data->arrow->direction));
 		_window.draw(arrow);
 	}
 

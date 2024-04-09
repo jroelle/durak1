@@ -8,6 +8,7 @@
 #include "UI.h"
 #include "Color.h"
 #include "Deck.h"
+#include "Vector.h"
 
 namespace
 {
@@ -401,11 +402,17 @@ namespace Screen
 		}
 	}
 
+	Arrow::Arrow(const sf::Vector2f& direction)
+		: _direction(direction)
+	{
+	}
+
 	void Arrow::run(sf::RenderTarget& target) const
 	{
 		constexpr float arrowHeadOffset = Size * 0.5f;
 
-		sf::VertexArray vertices(sf::PrimitiveType::Lines, 6);
+		Holder<sf::VertexArray> holder(sf::PrimitiveType::Lines, 6);
+		auto& vertices = holder.get();
 		setColor(vertices, Color::LightGrayGreen);
 
 		const sf::Vector2f top = { 0.f, -Size * 0.5f };
@@ -419,6 +426,7 @@ namespace Screen
 		vertices[4].position = { arrowHeadOffset, top.y + arrowHeadOffset };
 		vertices[5].position = top;
 
-		target.draw(vertices);
+		holder.rotate(angleDegree({ 0.f, -1.f }, _direction));
+		target.draw(holder);
 	}
 }
