@@ -135,7 +135,7 @@ void Game::Run()
 			{
 				std::lock_guard<std::mutex> guard(g_mutex);
 				window.close();
-				break;
+				return;
 			}
 
 			{

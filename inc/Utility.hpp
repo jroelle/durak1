@@ -364,25 +364,20 @@ namespace utility
 			return false;
 		}
 
-		storage::iterator begin()
+		size_t index_of(const KeyT& key) const
 		{
-			return _storage.begin();
+			return std::distance(const_cast<storage&>(_storage).begin(), _keys.at(key));
 		}
 
-		storage::iterator end()
-		{
-			return _storage.begin();
-		}
+		storage::iterator begin() { return _storage.begin(); }
+		storage::const_iterator begin() const { return _storage.begin(); }
+		storage::reverse_iterator rbegin() { return _storage.rbegin(); }
+		storage::const_reverse_iterator rbegin() const { return _storage.rbegin(); }
 
-		storage::const_iterator begin() const
-		{
-			return _storage.begin();
-		}
-
-		storage::const_iterator end() const
-		{
-			return _storage.begin();
-		}
+		storage::iterator end() { return _storage.end(); }
+		storage::const_iterator end() const { return _storage.end(); }
+		storage::reverse_iterator rend() { return _storage.rend(); }
+		storage::const_reverse_iterator rend() const { return _storage.rend(); }
 
 	private:
 		void add_key(const KeyT& key, storage::iterator iter)

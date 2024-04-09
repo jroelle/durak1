@@ -127,8 +127,8 @@ namespace
 			else
 				screenCard = std::make_unique<Screen::CloseCard>();
 
-			bool hasAnimations = !_animations.empty();
-			if (!_animations.empty())
+			const bool hasAnimations = HasAnimations();
+			if (HasAnimations())
 			{
 				auto& animation = _animations.front();
 				if (animation.onStart)
@@ -193,6 +193,11 @@ namespace
 		{
 			const auto cardSize = ::getCardSize();
 			return ::isPointInRectange(_state.position, cardSize.x, cardSize.y, point, interactOffset);
+		}
+
+		bool HasAnimations() const
+		{
+			return !_animations.empty();
 		}
 
 	private:
@@ -309,7 +314,7 @@ namespace
 			if (_cards.empty())
 				return std::nullopt;
 
-			return _cards.end()->GetCardInfo();
+			return _cards.rbegin()->GetCardInfo();
 		}
 
 	private:
@@ -393,10 +398,14 @@ namespace
 			}
 		}
 
-		std::optional<Card> FindCardUnderCursor(const sf::Vector2f& cursor) const
+		const sf::Vector2f& GetPosition() const
 		{
-			// TODO
-			return std::nullopt;
+			return _position;
+		}
+
+		const sf::Vector2f& GetFaceDirection() const
+		{
+			return _faceDirection;
 		}
 
 		virtual bool IsOpen() const
@@ -404,28 +413,23 @@ namespace
 			return false;
 		}
 
-		const sf::Vector2f& GetPosition() const
+		virtual void Hover(const std::optional<Card>& cardInfo)
 		{
-			return _position;
+			
 		}
 
-	private:
-		void onCardAdded(VisibleCard& cardAdded) override
+	protected:
+		struct DefaultStateOptions
 		{
-			cardAdded.SetOpen(IsOpen());
-			moveCards();
-		}
+			sf::Vector2f start;
+			sf::Vector2f dir;
+			float offset = 0.f;
+		};
 
-		void onCardRemoved(VisibleCard& cardRemoved) override
-		{
-			moveCards();
-		}
-
-	private:
-		void moveCards()
+		std::optional<DefaultStateOptions> getDefaultStateOptions() const
 		{
 			if (_cards.empty())
-				return;
+				return {};
 
 			const float cardsCount = static_cast<float>(_cards.size());
 			const sf::Vector2f cardSize = getCardSize();
@@ -437,13 +441,55 @@ namespace
 			const float offset = cardsWidth > maxWidth ? (maxWidth - cardSize.x) / (cardsCount - 1) : cardSize.x + gap;
 
 			sf::Vector2f start = _position - dir * 0.5f * (std::min(maxWidth, cardsWidth) - cardSize.x);
-			uint8_t i = 0;
-			_cards.for_each([&](VisibleCard& visibleCard)
+
+			DefaultStateOptions options;
+			options.start = start;
+			options.dir = dir;
+			options.offset = offset;
+			return options;
+		}
+
+		std::optional<State> getDefaultState(size_t i, const std::optional<DefaultStateOptions>& options) const
+		{
+			std::optional<DefaultStateOptions> actualOptions;
+			if (options)
+				actualOptions = options;
+			else
+				actualOptions = getDefaultStateOptions();
+
+			if (!actualOptions)
+				return {};
+
+			State state;
+			state.position = actualOptions->start + actualOptions->dir * actualOptions->offset * static_cast<float>(i);
+			state.angleDegree = angleDegree({ 0.f, -1.f }, _faceDirection); // TODO: rotating around wrong center
+			return state;
+		}
+
+	private:
+		void onCardAdded(VisibleCard& cardAdded) override
+		{
+			cardAdded.SetOpen(IsOpen());
+			arrangeCards();
+		}
+
+		void onCardRemoved(VisibleCard& cardRemoved) override
+		{
+			arrangeCards();
+		}
+
+		void arrangeCards()
+		{
+			const auto options = getDefaultStateOptions();
+			if (!options)
+				return;
+
+			size_t i = 0;
+			_cards.for_each([this, &options, &i](VisibleCard& visibleCard)
 				{
 					visibleCard.ResetAnimation();
 					Animation animation;
-					animation.finalState.position = start + dir * offset * static_cast<float>(i);
-					animation.finalState.angleDegree = angleDegree({ 0.f, -1.f }, _faceDirection); // TODO: rotating around wrong center
+					animation.finalState = *getDefaultState(i, options);
 					visibleCard.StartAnimation(animation);
 					++i;
 					return false;
@@ -467,15 +513,53 @@ namespace
 
 		std::optional<Card> Pick(const sf::Vector2f& cursor, float interactOffset = 0.f, const std::function<bool(const Card&)>& filter = {}) const override
 		{
-			std::optional<Card> pick;
-			_cards.for_each([&](const VisibleCard& visibleCard)
-				{
-					if ((!filter || filter(visibleCard.GetCardInfo())) && visibleCard.IsPointInside(cursor, interactOffset))
-						pick.emplace(visibleCard.GetCardInfo());
-					return pick.has_value();
-				});
-			return pick;
+			for (auto iter = _cards.rbegin(); iter != _cards.rend(); ++iter)
+			{
+				const VisibleCard& visibleCard = *iter;
+				if ((!filter || filter(visibleCard.GetCardInfo())) && visibleCard.IsPointInside(cursor, interactOffset))
+					return visibleCard.GetCardInfo();
+			}
+			return std::nullopt;
 		}
+
+		void Hover(const std::optional<Card>& cardInfo)
+		{
+			constexpr float offset = 20.f;
+			constexpr float animationCoeff = 0.5;
+
+			const auto options = getDefaultStateOptions();
+			if (!options)
+				return;
+
+			if (cardInfo)
+			{
+				auto& visibleCard = _cards.at(*cardInfo);
+				const auto defaultState = getDefaultState(_cards.index_of(*cardInfo), options);
+
+				Animation animation;
+				animation.finalState = *defaultState;
+				animation.finalState.position += GetFaceDirection() * offset;
+				animation.deltaPerFrame *= animationCoeff;
+
+				visibleCard.ResetAnimation();
+				visibleCard.StartAnimation(animation);
+			}
+			if (_hoverCard && (!cardInfo || *_hoverCard != *cardInfo))
+			{
+				Animation animation;
+				animation.finalState = *getDefaultState(_cards.index_of(*_hoverCard), options);
+				animation.deltaPerFrame *= animationCoeff;
+
+				auto& visibleCard = _cards.at(*_hoverCard);
+				visibleCard.ResetAnimation();
+				visibleCard.StartAnimation(animation);
+			}
+
+			_hoverCard = cardInfo;
+		}
+
+	private:
+		std::optional<Card> _hoverCard;
 	};
 
 	class Players
@@ -520,16 +604,6 @@ namespace
 			for (auto& player : _players)
 				res = player->Draw(delta, target) && res;
 			return res;
-		}
-
-		std::optional<Card> Pick(const sf::Vector2f& cursor, float interactOffset = 0.f, const std::function<bool(const Card&)>& filter = {}) const
-		{
-			for (Player::Id id = 0; id < static_cast<Player::Id>(_players.size()); ++id)
-			{
-				if (auto pick = _players[id]->Pick(cursor, interactOffset, filter))
-					return pick;
-			}
-			return std::nullopt;
 		}
 
 	private:
@@ -757,7 +831,7 @@ void UI::animate(const Context& context)
 
 void UI::update(const Context& context, sf::Time delta)
 {
-	if (!NeedsToUpdate())
+	if (!NeedsToUpdate() || !_window.isOpen())
 		return;
 
 	constexpr float interactOffset = 2.5f;
@@ -775,6 +849,7 @@ void UI::update(const Context& context, sf::Time delta)
 		_window.draw(deck);
 	}
 
+	auto& userCards = _data->playerCards.GetCards(context.GetPlayers().GetUser()->GetId());
 	_data->userPick = {};
 	if (_data->flags & Data::Flag::UserPickingCard)
 	{
@@ -795,25 +870,22 @@ void UI::update(const Context& context, sf::Time delta)
 			}
 		}
 
-		const auto filter = [&](const Card& card) -> bool
+		const auto filter = [&](const Card& card)
 			{
 				if (isUserAttacking)
-				{
 					return true;
-				}
-				else
-				{
-					const auto attackCard = _data->roundCards.GetLast();
-					return !attackCard || card.Beats(*attackCard, context.GetTrumpSuit());
-				}
+
+				const auto attackCard = _data->roundCards.GetLast();
+				return !attackCard || card.Beats(*attackCard, context.GetTrumpSuit());
 			};
 
-		if (auto pick = _data->playerCards.Pick(_data->cursorPosition, interactOffset, filter))
+		if (auto pick = userCards.Pick(_data->cursorPosition, interactOffset, filter))
 		{
 			_data->userPick.emplace(std::move(pick));
 			cursorType = sf::Cursor::Hand;
 		}
 	}
+	userCards.Hover(_data->userPick && _data->userPick->card ? _data->userPick->card : std::nullopt);
 
 	bool finished = true;
 	finished = _data->playerCards.Draw(delta, _window) && finished;
