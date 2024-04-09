@@ -401,12 +401,6 @@ namespace Screen
 		}
 	}
 
-	Arrow::Arrow(const sf::Vector2f& start, const sf::Vector2f& direction)
-		: _start(start)
-		, _direction(direction)
-	{
-	}
-
 	void Arrow::run(sf::RenderTarget& target) const
 	{
 		constexpr float arrowHeadOffset = Size * 0.5f;

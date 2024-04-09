@@ -88,13 +88,7 @@ namespace Screen
 	public:
 		static constexpr float Size = 25.f;
 
-		Arrow(const sf::Vector2f& start, const sf::Vector2f& direction);
-
 	private:
 		void run(sf::RenderTarget&) const override;
-
-	private:
-		sf::Vector2f _start;
-		sf::Vector2f _direction;
 	};
 }

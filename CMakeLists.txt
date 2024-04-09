@@ -23,6 +23,7 @@ add_executable(durak1 main.cpp
 					"src/Game.cpp"
 					"inc/Hand.h"
 					"src/Hand.cpp"
+					"inc/IController.h"
 					"inc/Player.h"
 					"src/Player.cpp"
 					"inc/PlayersGroup.h"

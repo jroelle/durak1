@@ -3,6 +3,7 @@
 #include <optional>
 #include <SFML/Graphics.hpp>
 #include <SFML/Window/Cursor.hpp>
+#include "IController.h"
 #include "Card.h"
 
 namespace sf
@@ -17,7 +18,7 @@ class Context;
 class User;
 class PlayersGroup;
 
-class UI final
+class UI final : public IController
 {
 public:
 	UI(const std::string&, unsigned int width, unsigned int height);
@@ -28,7 +29,7 @@ public:
 	bool NeedsToUpdate() const;
 	bool HandleEvent(const sf::Event&);
 	bool IsLocked() const;
-	std::optional<Card> UserPickCard(const Context&, const User&, bool attacking);
+	std::optional<Card> UserPickCard(const Context&, bool attacking, const PickCardFilter&) override;
 
 	void OnPlayerAttack(const Context&, const Player&, const Card&);
 	void OnPlayerDefend(const Context&, const Player&, const Card&);

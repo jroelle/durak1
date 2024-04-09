@@ -39,7 +39,11 @@ std::unique_ptr<Round> Round::Run(Context& context)
 		Player* attackerPickedCard = nullptr;
 		players.ForEachAttackPlayer([&](Player* attackPlayer)
 			{
-				attackCard = attackPlayer->Attack(context);
+				attackCard = attackPlayer->Attack(context, [&](const Card& card) -> bool
+					{
+						return _cards.empty()
+							|| std::find_if(_cards.cbegin(), _cards.cend(), [&card](const Card& roundCard) { return roundCard.GetRank() == card.GetRank(); }) != _cards.cend();
+					});
 				attackerPickedCard = attackPlayer;
 				return attackCard.has_value();
 			}, &_attacker);
@@ -47,7 +51,10 @@ std::unique_ptr<Round> Round::Run(Context& context)
 		if (attackCard)
 		{
 			_cards.push_back(*attackCard);
-			if (const auto defendCard = _defender.Defend(context, *attackCard))
+			if (const auto defendCard = _defender.Defend(context, [&](const Card& card) -> bool
+				{
+					return card.Beats(*attackCard, context.GetTrumpSuit());
+				}))
 			{
 				_cards.push_back(*defendCard);
 			}

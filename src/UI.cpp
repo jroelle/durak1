@@ -27,12 +27,12 @@ namespace
 		return a.x * b.x + a.y * b.y;
 	}
 
-	inline float angleDegree(const sf::Vector2f& a, const sf::Vector2f& b)
+	inline float angleDegree(const sf::Vector2f& a, const sf::Vector2f& b, float max = 360.f)
 	{
 		const float cos = dotProduct(a, b) / (length(a) * length(b));
 		const float angle = std::acos(cos) * 180.f / std::numbers::pi_v<float>;
-		const float remains = angle / 180.f - std::trunc(angle / 180.f);
-		return remains * 180.f;
+		const float remains = angle / max - std::trunc(angle / max);
+		return remains * max;
 	}
 
 	inline sf::Vector2f rotate(const sf::Vector2f& v, float angleDegree)
@@ -497,7 +497,7 @@ namespace
 
 			State state;
 			state.position = actualOptions->start + actualOptions->dir * actualOptions->offset * static_cast<float>(i);
-			state.angleDegree = angleDegree({ 0.f, -1.f }, _faceDirection); // TODO: rotating around wrong center
+			state.angleDegree = angleDegree({ 0.f, -1.f }, _faceDirection, 180.f); // TODO: rotating around wrong center
 			return state;
 		}
 
@@ -662,19 +662,29 @@ struct UI::Data
 		{
 			Default			= 0,
 			NeedRedraw		= 1 << 0,
-			UserPickingCard	= 1 << 1,
-			UserAttacking	= 1 << 2,
+			UserPickingCard = 1 << 1,
 		};
 	};
 
 	struct UserPick
 	{
-		std::optional<Card> card;
+		struct Options
+		{
+			PickCardFilter filter;
+			bool attacking = false;
+		};
+
+		struct Result
+		{
+			std::optional<Card> card;
+		};
+
+		Options options;
+		std::optional<Result> result;
 	};
 
 	struct Arrow
 	{
-		sf::Vector2f start;
 		sf::Vector2f direction;
 	};
 
@@ -724,12 +734,10 @@ bool UI::HandleEvent(const sf::Event& event)
 	switch (event.type)
 	{
 	case sf::Event::EventType::MouseButtonPressed:
-		if ((_data->flags & Data::Flag::UserPickingCard)
-			&& _data->userPick.has_value())
+		if (_data->userPick.has_value() && (_data->flags & Data::Flag::UserPickingCard))
 		{
 			_data->flags &= ~Data::Flag::NeedRedraw;
 			_data->flags &= ~Data::Flag::UserPickingCard;
-			_data->flags &= ~Data::Flag::UserAttacking;
 		}
 		break;
 
@@ -747,19 +755,19 @@ bool UI::IsLocked() const
 	return _data && (_data->flags & Data::Flag::NeedRedraw);
 }
 
-std::optional<Card> UI::UserPickCard(const Context& context, const User& user, bool attacking)
+std::optional<Card> UI::UserPickCard(const Context& context, bool attacking, const PickCardFilter& filter)
 {
+	auto& userPick = _data->userPick.emplace();
+	userPick.options.filter = filter;
+	userPick.options.attacking = attacking;
 	_data->flags |= Data::Flag::UserPickingCard;
-	if (attacking)
-		_data->flags |= Data::Flag::UserAttacking;
 
 	while (_data->flags & Data::Flag::UserPickingCard)
 		animate(context);
 
-	_data->flags &= ~Data::Flag::UserAttacking;
 	std::optional<Card> card;
-	if (_data->userPick && _data->userPick->card)
-		card = _data->userPick->card;
+	if (userPick.result && userPick.result->card)
+		card = userPick.result->card;
 
 	_data->userPick.reset();
 	return card;
@@ -802,7 +810,7 @@ void UI::OnRoundStart(const Context& context, const Round& round)
 	const auto& defenderCards = _data->playerCards.GetCards(round.GetDefender().GetId());
 	sf::Vector2f dir = defenderCards.GetPosition() - attackerCards.GetPosition();
 	dir /= length(dir);
-	_data->arrow.emplace(attackerCards.GetPosition(), dir);
+	_data->arrow.emplace(dir);
 
 	animate(context);
 	std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -907,8 +915,8 @@ void UI::update(const Context& context, sf::Time delta)
 	auto& userCards = _data->playerCards.GetCards(context.GetPlayers().GetUser()->GetId());
 	if (_data->flags & Data::Flag::UserPickingCard)
 	{
-		_data->userPick = {};
-		const bool isUserAttacking = _data->flags & Data::Flag::UserAttacking;
+		_data->userPick->result = {};
+		const bool isUserAttacking = _data->userPick->options.attacking;
 		const bool canSkip = !isUserAttacking || !_data->roundCards.IsEmpty();
 
 		if (canSkip)
@@ -920,36 +928,24 @@ void UI::update(const Context& context, sf::Time delta)
 
 			if (::isPointInRectange(center, Screen::SkipButton::Size, Screen::SkipButton::Size, _data->cursorPosition, interactOffset))
 			{
-				_data->userPick.emplace();
+				_data->userPick->result.emplace();
 				cursorType = sf::Cursor::Hand;
 			}
 		}
 
-		const auto filter = [&](const Card& card)
-			{
-				if (isUserAttacking)
-				{
-					return _data->roundCards.IsEmpty() || _data->roundCards.Contains(card.GetRank());
-				}
-				else
-				{
-					const auto attackCard = _data->roundCards.GetLast();
-					return !attackCard || card.Beats(*attackCard, context.GetTrumpSuit());
-				}
-			};
-
-		if (auto pick = userCards.Pick(_data->cursorPosition, interactOffset, filter))
+		if (auto pick = userCards.Pick(_data->cursorPosition, interactOffset, _data->userPick->options.filter))
 		{
-			_data->userPick.emplace(std::move(pick));
+			_data->userPick->result.emplace(std::move(pick));
 			cursorType = sf::Cursor::Hand;
 		}
 	}
-	userCards.Hover(_data->userPick && _data->userPick->card ? _data->userPick->card : std::nullopt);
+	userCards.Hover(_data->userPick && _data->userPick->result && _data->userPick->result->card ? _data->userPick->result->card : std::nullopt);
 
 	if (_data->arrow)
 	{
-		Screen::Arrow arrow(_data->arrow->start, _data->arrow->direction);
+		Screen::Arrow arrow;
 		arrow.setOrigin(0.5f * size);
+		arrow.setRotation(angleDegree({ 0.f, -1.f }, _data->arrow->direction));
 		_window.draw(arrow);
 	}
 

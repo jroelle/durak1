@@ -9,8 +9,7 @@ public:
 	{
 		Easy,
 		Medium,
-		Difficult,
-		Pro,
+		Hard,
 
 		Count,
 	};
@@ -18,8 +17,8 @@ public:
 	Bot(Id, Difficulty);
 
 protected:
-	std::optional<Card> pickAttackCard(const Context&) const override;
-	std::optional<Card> pickDefendCard(const Context&, const Card&) const override;
+	std::optional<Card> pickAttackCard(const Context&, const AttackFilter&) const override;
+	std::optional<Card> pickDefendCard(const Context&, const DefendFilter&) const override;
 
 private:
 	struct Memory

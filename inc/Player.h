@@ -6,17 +6,20 @@
 
 class Deck;
 class Context;
+class Round;
 
 class Player
 {
 public:
 	using Id = uint8_t;
+	using AttackFilter = std::function<bool(const Card&)>;
+	using DefendFilter = std::function<bool(const Card&)>;
 
 	Player(Id);
 	virtual ~Player() = default;
 
-	std::optional<Card> Attack(const Context&);
-	std::optional<Card> Defend(const Context&, const Card&);
+	std::optional<Card> Attack(const Context&, const AttackFilter&);
+	std::optional<Card> Defend(const Context&, const DefendFilter&);
 
 	Player& DrawCards(Deck&);
 	Player& DrawCards(std::vector<Card>&&);
@@ -29,8 +32,8 @@ public:
 protected:
 	Player() = default;
 
-	virtual std::optional<Card> pickAttackCard(const Context&) const = 0;
-	virtual std::optional<Card> pickDefendCard(const Context& , const Card&) const = 0;
+	virtual std::optional<Card> pickAttackCard(const Context&, const AttackFilter&) const = 0;
+	virtual std::optional<Card> pickDefendCard(const Context&, const DefendFilter&) const = 0;
 	
 private:
 	void removeCard(const std::optional<Card>&);
