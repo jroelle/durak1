@@ -369,6 +369,12 @@ namespace utility
 			return std::distance(const_cast<storage&>(_storage).begin(), _keys.at(key));
 		}
 
+		void clear()
+		{
+			_storage.clear();
+			_keys.clear();
+		}
+
 		storage::iterator begin() { return _storage.begin(); }
 		storage::const_iterator begin() const { return _storage.begin(); }
 		storage::reverse_iterator rbegin() { return _storage.rbegin(); }

@@ -305,9 +305,11 @@ namespace
 		bool Draw(sf::Time delta, sf::RenderTarget& target) override
 		{
 			const bool res = VisibleCards::Draw(delta, target);
-			for (const Card& removedCard : _removedCards)
-				_cards.remove(removedCard);
-			_removedCards.clear();
+			if (_clear)
+			{
+				_cards.clear();
+				_clear = false;
+			}
 			return res;
 		}
 
@@ -317,9 +319,9 @@ namespace
 				{
 					Animation animation;
 					animation.finalState.position = { -getCardSize().x, _view.getSize().y * 0.5f };
-					animation.onFinish = [this, &visibleCard]()
+					animation.onFinish = [this]()
 						{
-							_removedCards.push_back(visibleCard.GetCardInfo());
+							_clear = true;
 						};
 					visibleCard.StartAnimation(animation);
 					return false;
@@ -391,7 +393,7 @@ namespace
 		}
 
 	private:
-		std::list<Card> _removedCards;
+		bool _clear = false;
 	};
 
 	class PlayerCards : public VisibleCards
