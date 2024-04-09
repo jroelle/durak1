@@ -537,8 +537,9 @@ struct UI::Data
 		enum Value : int
 		{
 			Default			= 0,
-			PickingCard		= 1 << 0,
-			NeedRedraw		= 1 << 1,
+			UserPickingCard	= 1 << 0,
+			UserCanSkip		= 1 << 1,
+			NeedRedraw		= 1 << 2,
 		};
 	};
 
@@ -592,11 +593,12 @@ bool UI::HandleEvent(const sf::Event& event)
 	switch (event.type)
 	{
 	case sf::Event::EventType::MouseButtonPressed:
-		if ((_data->flags & Data::Flag::PickingCard)
+		if ((_data->flags & Data::Flag::UserPickingCard)
 			&& _data->userPick.has_value())
 		{
 			_data->flags |= Data::Flag::NeedRedraw;
-			_data->flags &= ~Data::Flag::PickingCard;
+			_data->flags &= ~Data::Flag::UserPickingCard;
+			_data->flags &= ~Data::Flag::UserCanSkip;
 		}
 		break;
 
@@ -618,12 +620,14 @@ bool UI::IsLocked() const
 	return _data && (_data->flags & Data::Flag::NeedRedraw);
 }
 
-std::optional<Card> UI::UserPickCard(const Context& context, const User& user)
+std::optional<Card> UI::UserPickCard(const Context& context, const User& user, bool canSkip)
 {
-	_data->flags |= Data::Flag::PickingCard;
-	while (_data->flags & Data::Flag::PickingCard)
+	_data->flags |= Data::Flag::UserPickingCard | Data::Flag::UserCanSkip;
+
+	while (_data->flags & Data::Flag::UserPickingCard)
 		animate(context);
 
+	_data->flags &= ~Data::Flag::UserCanSkip;
 	if (_data->userPick && _data->userPick->card)
 		return _data->userPick->card;
 
@@ -767,13 +771,14 @@ void UI::update(const Context& context, sf::Time delta)
 	}
 
 	_data->userPick = {};
-	if (_data->flags & Data::Flag::PickingCard)
+	if (_data->flags & Data::Flag::UserPickingCard)
 	{
 		Screen::SkipButton skipButton;
 		const sf::Vector2f center(0.5f * size.x, size.y - Screen::Card{}.getSize().y);
 		skipButton.setOrigin(center);
 		_window.draw(skipButton);
-		if (::isPointInRectange(center, Screen::SkipButton::Size, Screen::SkipButton::Size, _data->cursorPosition, interactOffset))
+		if ((_data->flags & Data::Flag::UserCanSkip) &&
+			::isPointInRectange(center, Screen::SkipButton::Size, Screen::SkipButton::Size, _data->cursorPosition, interactOffset))
 		{
 			_data->userPick.emplace();
 			cursorType = sf::Cursor::Hand;
