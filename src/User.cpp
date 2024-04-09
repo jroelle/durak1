@@ -6,11 +6,11 @@
 std::optional<Card> User::pickAttackCard(const Context& context) const
 {
 	auto ui = context.GetUI();
-	return ui ? ui->UserPickCard(*this) : std::nullopt;
+	return ui ? ui->UserPickCard(context, *this) : std::nullopt;
 }
 
 std::optional<Card> User::pickDefendCard(const Context& context, const Card& attackCard) const
 {
 	auto ui = context.GetUI();
-	return ui ? ui->UserPickCard(*this) : std::nullopt;
+	return ui ? ui->UserPickCard(context, *this) : std::nullopt;
 }

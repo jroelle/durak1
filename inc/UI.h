@@ -28,7 +28,7 @@ public:
 	bool NeedsToUpdate() const;
 	bool HandleEvent(const sf::Event&);
 	bool IsLocked() const;
-	std::optional<Card> UserPickCard(const User&);
+	std::optional<Card> UserPickCard(const Context&, const User&);
 
 	void OnPlayerAttack(const Context&, const Player&, const Card&);
 	void OnPlayerDefend(const Context&, const Player&, const Card&);

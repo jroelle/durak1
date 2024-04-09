@@ -189,6 +189,12 @@ namespace
 			return _cardInfo;
 		}
 
+		bool IsPointInside(const sf::Vector2f& point, float interactOffset = 0.f) const
+		{
+			const auto cardSize = ::getCardSize();
+			return ::isPointInRectange(_state.position, cardSize.x, cardSize.y, point, interactOffset);
+		}
+
 	private:
 		::Card _cardInfo;
 		State _state;
@@ -259,6 +265,11 @@ namespace
 		std::optional<State> GetState(const ::Card& cardInfo) const
 		{
 			return _cards.at(cardInfo).GetState();
+		}
+
+		virtual std::optional<Card> Pick(const sf::Vector2f& cursor, float interactOffset = 0.f) const
+		{
+			return std::nullopt;
 		}
 
 	private:
@@ -445,6 +456,18 @@ namespace
 		{
 			return true;
 		}
+
+		std::optional<Card> Pick(const sf::Vector2f& cursor, float interactOffset = 0.f) const override
+		{
+			std::optional<Card> pick;
+			_cards.for_each([&pick, &cursor, interactOffset](const VisibleCard& visibleCard)
+				{
+					if (visibleCard.IsPointInside(cursor, interactOffset))
+						pick.emplace(visibleCard.GetCardInfo());
+					return pick.has_value();
+				});
+			return pick;
+		}
 	};
 
 	class Players
@@ -491,6 +514,16 @@ namespace
 			return res;
 		}
 
+		std::optional<Card> Pick(const sf::Vector2f& cursor, float interactOffset = 0.f) const
+		{
+			for (Player::Id id = 0; id < static_cast<Player::Id>(_players.size()); ++id)
+			{
+				if (auto pick = _players[id]->Pick(cursor, interactOffset))
+					return pick;
+			}
+			return std::nullopt;
+		}
+
 	private:
 		using Index = Player::Id;
 		std::vector<std::unique_ptr<PlayerCards>> _players;
@@ -509,10 +542,16 @@ struct UI::Data
 		};
 	};
 
+	struct UserPick
+	{
+		std::optional<Card> card;
+	};
+
 	Players playerCards;
 	RoundCards roundCards;
 	std::underlying_type_t<Flag::Value> flags = Flag::Default;
 	sf::Vector2f cursorPosition;
+	std::optional<UserPick> userPick;
 
 	Data(const sf::View& view, size_t botsNumber)
 		: playerCards(view, botsNumber)
@@ -553,18 +592,17 @@ bool UI::HandleEvent(const sf::Event& event)
 	switch (event.type)
 	{
 	case sf::Event::EventType::MouseButtonPressed:
-		if (_data->flags & Data::Flag::PickingCard)
+		if ((_data->flags & Data::Flag::PickingCard)
+			&& _data->userPick.has_value())
 		{
-			
-
 			_data->flags |= Data::Flag::NeedRedraw;
+			_data->flags &= ~Data::Flag::PickingCard;
 		}
 		break;
 
-	case sf::Event::EventType::MouseButtonReleased:
-		_data->flags |= Data::Flag::NeedRedraw;
-		//if (_data->interactZone.intersects()
-		break;
+	//case sf::Event::EventType::MouseButtonReleased:
+	//	_data->flags |= Data::Flag::NeedRedraw;
+	//	break;
 
 	case sf::Event::EventType::MouseMoved:
 		_data->cursorPosition = toModel({ event.mouseMove.x, event.mouseMove.y });
@@ -580,21 +618,16 @@ bool UI::IsLocked() const
 	return _data && (_data->flags & Data::Flag::NeedRedraw);
 }
 
-std::optional<Card> UI::UserPickCard(const User& user)
+std::optional<Card> UI::UserPickCard(const Context& context, const User& user)
 {
-	std::optional<Card> card;
-	bool skip = false;
-
 	_data->flags |= Data::Flag::PickingCard;
-	//while (_window.isOpen() && _data->flags & Data::Flag::PickingCard)
-	//{
-	//	// ...
+	while (_data->flags & Data::Flag::PickingCard)
+		animate(context);
 
-	//	if (card || skip)
-	//		break;
-	//}
-	_data->flags &= ~Data::Flag::PickingCard;
-	return card;
+	if (_data->userPick && _data->userPick->card)
+		return _data->userPick->card;
+
+	return std::nullopt;
 }
 
 void UI::OnPlayerAttack(const Context& context, const Player& attacker, const Card& attackCard)
@@ -733,14 +766,23 @@ void UI::update(const Context& context, sf::Time delta)
 		_window.draw(deck);
 	}
 
+	_data->userPick = {};
 	if (_data->flags & Data::Flag::PickingCard)
 	{
 		Screen::SkipButton skipButton;
 		const sf::Vector2f center(0.5f * size.x, size.y - Screen::Card{}.getSize().y);
 		skipButton.setOrigin(center);
 		_window.draw(skipButton);
-		if (isPointInRectange(center, Screen::SkipButton::Size, Screen::SkipButton::Size, _data->cursorPosition, interactOffset))
+		if (::isPointInRectange(center, Screen::SkipButton::Size, Screen::SkipButton::Size, _data->cursorPosition, interactOffset))
+		{
+			_data->userPick.emplace();
 			cursorType = sf::Cursor::Hand;
+		}
+		else if (auto pick = _data->playerCards.Pick(_data->cursorPosition, interactOffset))
+		{
+			_data->userPick.emplace(std::move(pick));
+			cursorType = sf::Cursor::Hand;
+		}
 	}
 
 	bool finished = true;
