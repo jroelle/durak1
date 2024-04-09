@@ -610,10 +610,6 @@ bool UI::HandleEvent(const sf::Event& event)
 		}
 		break;
 
-	//case sf::Event::EventType::MouseButtonReleased:
-	//	_data->flags |= Data::Flag::NeedRedraw;
-	//	break;
-
 	case sf::Event::EventType::MouseMoved:
 		_data->cursorPosition = toModel({ event.mouseMove.x, event.mouseMove.y });
 		_data->flags |= Data::Flag::NeedRedraw;
@@ -803,12 +799,12 @@ void UI::update(const Context& context, sf::Time delta)
 			{
 				if (isUserAttacking)
 				{
-					const auto attackCard = _data->roundCards.GetLast();
-					return !attackCard || card.Beats(*attackCard, context.GetTrumpSuit());
+					return true;
 				}
 				else
 				{
-					return true;
+					const auto attackCard = _data->roundCards.GetLast();
+					return !attackCard || card.Beats(*attackCard, context.GetTrumpSuit());
 				}
 			};
 
