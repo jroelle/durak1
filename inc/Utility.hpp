@@ -379,6 +379,11 @@ namespace utility
 		storage::reverse_iterator rend() { return _storage.rend(); }
 		storage::const_reverse_iterator rend() const { return _storage.rend(); }
 
+		ValueT& front() { return _storage.front(); }
+		const ValueT& front() const { return _storage.front(); }
+		ValueT& back() { return _storage.back(); }
+		const ValueT& back() const { return _storage.back(); }
+
 	private:
 		void add_key(const KeyT& key, storage::iterator iter)
 		{

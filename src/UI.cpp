@@ -101,7 +101,7 @@ namespace
 		using OnFinish = std::function<void()>;
 
 		State finalState;
-		float deltaPerFrame = 25.f;
+		float deltaPerFrame = 15.f;
 		OnStart onStart;
 		OnFinish onFinish;
 	};
@@ -251,7 +251,7 @@ namespace
 			_cards.at(cardInfo).StartAnimation(animation);
 		}
 
-		bool Draw(sf::Time delta, sf::RenderTarget& target)
+		virtual bool Draw(sf::Time delta, sf::RenderTarget& target)
 		{
 			bool res = true;
 			_cards.for_each([&res, delta, &target](VisibleCard& visibleCard)
@@ -277,7 +277,7 @@ namespace
 			return std::nullopt;
 		}
 
-	private:
+	protected:
 		virtual void onCardAdded(VisibleCard&) {}
 		virtual void onCardRemoved(VisibleCard&) {}
 
@@ -302,11 +302,28 @@ namespace
 	public:
 		using VisibleCards::VisibleCards;
 
+		bool Draw(sf::Time delta, sf::RenderTarget& target) override
+		{
+			const bool res = VisibleCards::Draw(delta, target);
+			for (const Card& removedCard : _removedCards)
+				_cards.remove(removedCard);
+			_removedCards.clear();
+			return res;
+		}
+
 		void RemoveAll()
 		{
-			Animation animation;
-			animation.finalState.position = { -200.f, -200.f };
-			StartAnimation(animation);
+			_cards.for_each([this](VisibleCard& visibleCard)
+				{
+					Animation animation;
+					animation.finalState.position = { -getCardSize().x, _view.getSize().y * 0.5f };
+					animation.onFinish = [this, &visibleCard]()
+						{
+							_removedCards.push_back(visibleCard.GetCardInfo());
+						};
+					visibleCard.StartAnimation(animation);
+					return false;
+				});
 		}
 
 		std::optional<Card> GetLast() const
@@ -314,11 +331,24 @@ namespace
 			if (_cards.empty())
 				return std::nullopt;
 
-			return _cards.rbegin()->GetCardInfo();
+			return _cards.back().GetCardInfo();
 		}
 
-	private:
-		void onCardAdded(VisibleCard& cardAdded)
+		bool IsEmpty() const
+		{
+			return _cards.empty();
+		}
+
+		bool Contains(Card::Rank rank) const
+		{
+			return _cards.for_each([rank](const VisibleCard& visibleCard)
+				{
+					return rank == visibleCard.GetCardInfo().GetRank();
+				});
+		}
+
+	protected:
+		void onCardAdded(VisibleCard& cardAdded) override
 		{
 			cardAdded.SetOpen(true);
 
@@ -359,6 +389,9 @@ namespace
 
 			return { position, 0.f };
 		}
+
+	private:
+		std::list<Card> _removedCards;
 	};
 
 	class PlayerCards : public VisibleCards
@@ -466,7 +499,6 @@ namespace
 			return state;
 		}
 
-	private:
 		void onCardAdded(VisibleCard& cardAdded) override
 		{
 			cardAdded.SetOpen(IsOpen());
@@ -556,6 +588,14 @@ namespace
 			}
 
 			_hoverCard = cardInfo;
+		}
+
+	private:
+		void onCardRemoved(VisibleCard& cardRemoved) override
+		{
+			if (_hoverCard && *_hoverCard == cardRemoved.GetCardInfo())
+				_hoverCard.reset();
+			PlayerCards::onCardRemoved(cardRemoved);
 		}
 
 	private:
@@ -852,12 +892,12 @@ void UI::update(const Context& context, sf::Time delta)
 		_window.draw(deck);
 	}
 
+	auto& userCards = _data->playerCards.GetCards(context.GetPlayers().GetUser()->GetId());
 	if (_data->flags & Data::Flag::UserPickingCard)
 	{
-		auto& userCards = _data->playerCards.GetCards(context.GetPlayers().GetUser()->GetId());
 		_data->userPick = {};
 		const bool isUserAttacking = _data->flags & Data::Flag::UserAttacking;
-		const bool canSkip = !isUserAttacking;
+		const bool canSkip = !isUserAttacking || !_data->roundCards.IsEmpty();
 
 		if (canSkip)
 		{
@@ -876,10 +916,14 @@ void UI::update(const Context& context, sf::Time delta)
 		const auto filter = [&](const Card& card)
 			{
 				if (isUserAttacking)
-					return true;
-
-				const auto attackCard = _data->roundCards.GetLast();
-				return !attackCard || card.Beats(*attackCard, context.GetTrumpSuit());
+				{
+					return _data->roundCards.IsEmpty() || _data->roundCards.Contains(card.GetRank());
+				}
+				else
+				{
+					const auto attackCard = _data->roundCards.GetLast();
+					return !attackCard || card.Beats(*attackCard, context.GetTrumpSuit());
+				}
 			};
 
 		if (auto pick = userCards.Pick(_data->cursorPosition, interactOffset, filter))
@@ -887,8 +931,8 @@ void UI::update(const Context& context, sf::Time delta)
 			_data->userPick.emplace(std::move(pick));
 			cursorType = sf::Cursor::Hand;
 		}
-		userCards.Hover(_data->userPick && _data->userPick->card ? _data->userPick->card : std::nullopt);
 	}
+	userCards.Hover(_data->userPick && _data->userPick->card ? _data->userPick->card : std::nullopt);
 
 	bool finished = true;
 	finished = _data->playerCards.Draw(delta, _window) && finished;
