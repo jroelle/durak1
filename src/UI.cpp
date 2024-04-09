@@ -678,7 +678,7 @@ bool UI::HandleEvent(const sf::Event& event)
 		if ((_data->flags & Data::Flag::UserPickingCard)
 			&& _data->userPick.has_value())
 		{
-			_data->flags |= Data::Flag::NeedRedraw;
+			_data->flags &= ~Data::Flag::NeedRedraw;
 			_data->flags &= ~Data::Flag::UserPickingCard;
 			_data->flags &= ~Data::Flag::UserAttacking;
 		}
@@ -707,10 +707,13 @@ std::optional<Card> UI::UserPickCard(const Context& context, const User& user, b
 	while (_data->flags & Data::Flag::UserPickingCard)
 		animate(context);
 
+	_data->flags &= ~Data::Flag::UserAttacking;
+	std::optional<Card> card;
 	if (_data->userPick && _data->userPick->card)
-		return _data->userPick->card;
+		card = _data->userPick->card;
 
-	return std::nullopt;
+	_data->userPick.reset();
+	return card;
 }
 
 void UI::OnPlayerAttack(const Context& context, const Player& attacker, const Card& attackCard)
@@ -849,10 +852,10 @@ void UI::update(const Context& context, sf::Time delta)
 		_window.draw(deck);
 	}
 
-	auto& userCards = _data->playerCards.GetCards(context.GetPlayers().GetUser()->GetId());
-	_data->userPick = {};
 	if (_data->flags & Data::Flag::UserPickingCard)
 	{
+		auto& userCards = _data->playerCards.GetCards(context.GetPlayers().GetUser()->GetId());
+		_data->userPick = {};
 		const bool isUserAttacking = _data->flags & Data::Flag::UserAttacking;
 		const bool canSkip = !isUserAttacking;
 
@@ -884,8 +887,8 @@ void UI::update(const Context& context, sf::Time delta)
 			_data->userPick.emplace(std::move(pick));
 			cursorType = sf::Cursor::Hand;
 		}
+		userCards.Hover(_data->userPick && _data->userPick->card ? _data->userPick->card : std::nullopt);
 	}
-	userCards.Hover(_data->userPick && _data->userPick->card ? _data->userPick->card : std::nullopt);
 
 	bool finished = true;
 	finished = _data->playerCards.Draw(delta, _window) && finished;
