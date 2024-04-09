@@ -659,9 +659,9 @@ struct UI::Data
 		enum Value : int
 		{
 			Default			= 0,
-			UserPickingCard	= 1 << 0,
-			UserAttacking	= 1 << 1,
-			NeedRedraw		= 1 << 2,
+			NeedRedraw		= 1 << 0,
+			UserPickingCard	= 1 << 1,
+			UserAttacking	= 1 << 2,
 		};
 	};
 
@@ -670,11 +670,18 @@ struct UI::Data
 		std::optional<Card> card;
 	};
 
+	struct Arrow
+	{
+		sf::Vector2f start;
+		sf::Vector2f direction;
+	};
+
 	Players playerCards;
 	RoundCards roundCards;
 	std::underlying_type_t<Flag::Value> flags = Flag::Default;
 	sf::Vector2f cursorPosition;
 	std::optional<UserPick> userPick;
+	std::optional<Arrow> arrow;
 
 	Data(const sf::View& view, size_t botsNumber)
 		: playerCards(view, botsNumber)
@@ -791,11 +798,13 @@ void UI::OnRoundStart(const Context& context, const Round& round)
 {
 	const auto& attackerCards = _data->playerCards.GetCards(round.GetAttacker().GetId());
 	const auto& defenderCards = _data->playerCards.GetCards(round.GetDefender().GetId());
-	const sf::Vector2f& arrowStart = attackerCards.GetPosition();
-	const sf::Vector2f& arrowEnd = defenderCards.GetPosition();
-	// TODO: draw attacker to defender arrow
+	sf::Vector2f dir = defenderCards.GetPosition() - attackerCards.GetPosition();
+	dir /= length(dir);
+	_data->arrow.emplace(attackerCards.GetPosition(), dir);
 
 	animate(context);
+	std::this_thread::sleep_for(std::chrono::seconds(2));
+	_data->arrow.reset();
 }
 
 void UI::OnRoundEnd(const Context& context, const Round& round)
@@ -808,7 +817,7 @@ void UI::OnPlayersCreated(const Context& context, const PlayersGroup& players)
 {
 	_data = std::make_unique<Data>(_window.getView(), players.GetCount() - 1);
 	animate(context);
-	std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+	std::this_thread::sleep_for(std::chrono::seconds(3));
 }
 
 void UI::OnStartGame(const Context& context, const Player& first)
@@ -933,6 +942,13 @@ void UI::update(const Context& context, sf::Time delta)
 		}
 	}
 	userCards.Hover(_data->userPick && _data->userPick->card ? _data->userPick->card : std::nullopt);
+
+	if (_data->arrow)
+	{
+		Screen::Arrow arrow(_data->arrow->start, _data->arrow->direction);
+		arrow.setOrigin(0.5f * size);
+		_window.draw(arrow);
+	}
 
 	bool finished = true;
 	finished = _data->playerCards.Draw(delta, _window) && finished;

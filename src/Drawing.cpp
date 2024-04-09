@@ -400,4 +400,31 @@ namespace Screen
 			target.draw(firstCard);
 		}
 	}
+
+	Arrow::Arrow(const sf::Vector2f& start, const sf::Vector2f& direction)
+		: _start(start)
+		, _direction(direction)
+	{
+	}
+
+	void Arrow::run(sf::RenderTarget& target) const
+	{
+		constexpr float arrowHeadOffset = Size * 0.5f;
+
+		sf::VertexArray vertices(sf::PrimitiveType::Lines, 6);
+		setColor(vertices, Color::LightGrayGreen);
+
+		const sf::Vector2f top = { 0.f, -Size * 0.5f };
+
+		vertices[0].position = { 0.f, Size * 0.5f };
+		vertices[1].position = top;
+
+		vertices[2].position = { -arrowHeadOffset, top.y + arrowHeadOffset };
+		vertices[3].position = top;
+
+		vertices[4].position = { arrowHeadOffset, top.y + arrowHeadOffset };
+		vertices[5].position = top;
+
+		target.draw(vertices);
+	}
 }
