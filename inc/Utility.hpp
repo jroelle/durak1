@@ -364,6 +364,26 @@ namespace utility
 			return false;
 		}
 
+		storage::iterator begin()
+		{
+			return _storage.begin();
+		}
+
+		storage::iterator end()
+		{
+			return _storage.begin();
+		}
+
+		storage::const_iterator begin() const
+		{
+			return _storage.begin();
+		}
+
+		storage::const_iterator end() const
+		{
+			return _storage.begin();
+		}
+
 	private:
 		void add_key(const KeyT& key, storage::iterator iter)
 		{
