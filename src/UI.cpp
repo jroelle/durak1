@@ -368,7 +368,7 @@ namespace
 			const size_t rows = findMinDenominator(Round::MaxAttacksCount, 2);
 			const size_t columns = Round::MaxAttacksCount / rows;
 
-			const size_t index = roundCardCount;
+			const size_t index = roundCardCount - 1;
 			const bool isOverlayed = index % 2 == 0;
 			const size_t pair = index / 2;
 
@@ -376,16 +376,16 @@ namespace
 			const size_t row = pair / rows;
 
 			const sf::Vector2f cardSize = getCardSize();
-			const sf::Vector2f overlapOffset = { cardSize.x * 0.2f, 0.f };
+			const sf::Vector2f overlapOffset = { -cardSize.x * 0.2f, 0.f };
 			const sf::Vector2f cardPairSize = cardSize + overlapOffset;
-			const sf::Vector2f roundArea = 0.6f * _view.getSize();
+			const sf::Vector2f roundArea = 0.5f * _view.getSize();
 			const sf::Vector2f gap = { (roundArea.x - columns * cardPairSize.x) / (columns - 1), (roundArea.y - rows * cardPairSize.y) / (rows - 1) };
 
 			const sf::Vector2f start = 0.5f * (_view.getSize() - roundArea);
 
 			sf::Vector2f position = start;
-			position.x += column * cardPairSize.x + column * gap.x;
-			position.y += row * cardPairSize.y + row * gap.y;
+			position.x += column * (cardPairSize.x + gap.x);
+			position.y += row * (cardPairSize.y + gap.y);
 			if (isOverlayed)
 				position += overlapOffset;
 
@@ -863,6 +863,7 @@ void UI::onPlayerPlaceCard(const Context& context, const Player& player, const C
 {
 	_data->roundCards.MoveFrom(card, _data->playerCards.GetCards(player.GetId()));
 	animate(context);
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
 sf::Vector2f UI::getDeckPosition() const
