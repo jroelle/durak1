@@ -31,6 +31,7 @@ std::unique_ptr<Round> Round::Run(Context& context)
 	auto& players = context.GetPlayers();
 	EventHandlers::Get().OnRoundStart(*this);
 
+	bool defenderLost = false;
 	_cards.reserve(MaxAttacksCount * 2);
 	for (size_t attackIndex = 0; attackIndex < MaxAttacksCount; ++attackIndex)
 	{
@@ -53,10 +54,14 @@ std::unique_ptr<Round> Round::Run(Context& context)
 			else
 			{
 				_defender.DrawCards(std::move(_cards));
+				defenderLost = true;
 				break;
 			}
 		}
-		break;
+		else
+		{
+			break;
+		}
 	}
 
 	EventHandlers::Get().OnRoundEnd(*this);
@@ -82,9 +87,10 @@ std::unique_ptr<Round> Round::Run(Context& context)
 		EventHandlers::Get().OnUserLose(*players.GetUser());
 		return nullptr;
 	}
-
 	players.RemoveIf(hasNoCards);
-	return std::make_unique<Round>(_defender, players.GetDefender(_defender));
+
+	auto& nextAttacker = defenderLost ? players.Next(_defender) : _defender;
+	return std::make_unique<Round>(nextAttacker, players.GetDefender(nextAttacker));
 }
 
 const Round::Cards& Round::GetCards() const

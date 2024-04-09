@@ -51,7 +51,7 @@ namespace
 		}
 		void OnPlayerDrawRoundCards(const Player& player, const std::vector<Card>& cards)
 		{
-			callUI([&](UI& ui, const Context& context) { ui.OnPlayerDrawDeckCards(context, player, cards); });
+			callUI([&](UI& ui, const Context& context) { ui.OnPlayerDrawRoundCards(context, player, cards); });
 		}
 		void OnRoundStart(const Round& round)
 		{
