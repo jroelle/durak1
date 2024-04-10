@@ -705,7 +705,8 @@ bool UI::HandleEvent(const sf::Event& event)
 
 	case sf::Event::EventType::MouseMoved:
 		_data->cursorPosition = toModel({ event.mouseMove.x, event.mouseMove.y });
-		_data->flags |= Data::Flag::NeedRedraw;
+		if (_data->flags & Data::Flag::UserPickingCard)
+			_data->flags |= Data::Flag::NeedRedraw;
 		break;
 	}
 
