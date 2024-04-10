@@ -5,6 +5,7 @@
 #include "Card.h"
 #include "Context.h"
 #include "Event.hpp"
+#include "Random.hpp"
 
 class Bot::Behavior : public EventHandler
 {
@@ -36,24 +37,38 @@ namespace
 
 		std::optional<Card> PickAttackCard(const Bot::CardFilter& filter) const override
 		{
-			for (size_t i = 0; i < _owner.GetHand().GetCardCount(); ++i)
-			{
-				const Card card = _owner.GetHand().GetCard(i);
-				if (!filter || filter(card))
-					return card;
-			}
-			return std::nullopt;
+			return pickCard(filter);
 		}
 
 		std::optional<Card> PickDefendCard(const Bot::CardFilter& filter) const override
 		{
-			for (size_t i = 0; i < _owner.GetHand().GetCardCount(); ++i)
+			return pickCard(filter);
+		}
+
+	private:
+		static Card randomPick(const std::vector<Card>& filteredCards)
+		{
+			const size_t index = Random::GetNumber(filteredCards.size() - 1);
+			return filteredCards[index];
+		}
+
+		std::optional<Card> pickCard(const Bot::CardFilter& filter) const
+		{
+			std::vector<Card> filteredCards;
+
+			const auto& hand = _owner.GetHand();
+			filteredCards.reserve(hand.GetCardCount());
+			for (size_t i = 0; i < hand.GetCardCount(); ++i)
 			{
-				const Card card = _owner.GetHand().GetCard(i);
+				const Card card = hand.GetCard(i);
 				if (!filter || filter(card))
-					return card;
+					filteredCards.push_back(card);
 			}
-			return std::nullopt;
+
+			if (filteredCards.empty())
+				return std::nullopt;
+
+			return randomPick(filteredCards);
 		}
 	};
 

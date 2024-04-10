@@ -906,7 +906,7 @@ void UI::update(const Context& context, sf::Time delta)
 	if (!NeedsToUpdate() || !_window.isOpen() || !_data)
 		return;
 
-	constexpr float interactOffset = 2.5f;
+	constexpr float interactOffset = 5.f;
 	const auto size = _window.getView().getSize();
 	sf::Cursor::Type cursorType = sf::Cursor::Arrow;
 

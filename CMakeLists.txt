@@ -28,6 +28,7 @@ add_executable(durak1 main.cpp
 					"src/Player.cpp"
 					"inc/PlayersGroup.h"
 					"src/PlayersGroup.cpp"
+					"inc/Random.hpp"
 					"inc/Round.h"
 					"src/Round.cpp"
 					"inc/UI.h"
@@ -35,7 +36,8 @@ add_executable(durak1 main.cpp
 					"inc/User.h"
 					"src/User.cpp"
 					"inc/Utility.hpp"
- "inc/Vector.h")
+					"inc/Vector.h"
+)
 
 target_link_libraries(durak1 PRIVATE sfml-graphics sfml-window sfml-system)
 

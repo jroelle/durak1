@@ -1,7 +1,7 @@
 #include "Deck.h"
 #include <functional>
 #include <algorithm>
-#include <random>
+#include "Random.hpp"
 
 namespace
 {
@@ -24,10 +24,7 @@ namespace
 				deque.push_back(card);
 			});
 
-		std::random_device rd;
-		std::mt19937 g(rd());
-		std::shuffle(deque.begin(), deque.end(), g);
-
+		std::shuffle(deque.begin(), deque.end(), Random::GetGenerator());
 		return std::queue<Card>(std::move(deque));
 	}
 }
