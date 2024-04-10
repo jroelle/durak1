@@ -76,6 +76,10 @@ public:
 	{
 		forEach([&](EventHandler* handler) { handler->OnPlayersCreated(players); });
 	}
+	void OnPlayerShowTrumpCard(const Player& player, const Card& card) override
+	{
+		forEach([&](EventHandler* handler) { handler->OnPlayerShowTrumpCard(player, card); });
+	}
 	void OnStartGame() override
 	{
 		forEach([&](EventHandler* handler) { handler->OnStartGame(); });

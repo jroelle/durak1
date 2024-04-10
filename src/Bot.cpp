@@ -1,6 +1,7 @@
 #include "Bot.h"
 #include <map>
 #include <set>
+#include <thread>
 #include "Card.h"
 #include "Context.h"
 #include "Event.hpp"
@@ -147,6 +148,7 @@ Bot::~Bot()
 
 std::optional<Card> Bot::pickAttackCard(const Context& context, const CardFilter& filter) const
 {
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 	if (_behavior)
 		return _behavior->PickAttackCard(filter);
 	return std::nullopt;
@@ -154,6 +156,7 @@ std::optional<Card> Bot::pickAttackCard(const Context& context, const CardFilter
 
 std::optional<Card> Bot::pickDefendCard(const Context& context, const CardFilter& filter) const
 {
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 	if (_behavior)
 		return _behavior->PickDefendCard(filter);
 	return std::nullopt;

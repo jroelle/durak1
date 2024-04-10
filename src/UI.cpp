@@ -335,8 +335,8 @@ namespace
 			const bool isOverlayed = index % 2 == 0;
 			const size_t pair = index / 2;
 
-			const size_t column = pair % rows;
-			const size_t row = pair / rows;
+			const size_t column = pair % columns;
+			const size_t row = pair / columns;
 
 			const sf::Vector2f cardSize = getCardSize();
 			const sf::Vector2f overlapOffset = { -cardSize.x * 0.2f, 0.f };
@@ -372,12 +372,15 @@ namespace
 
 		void ShowCard(const Card& cardInfo)
 		{
+			constexpr float deltaCoeff = 0.5f;
+
 			auto& visibleCard = _cards.at(cardInfo);
 			const auto& state = visibleCard.GetFinalState();
 			{
 				Animation animation;
 				animation.finalState.position = state.position + 200.f * _faceDirection;
 				animation.finalState.angleDegree = state.angleDegree;
+				animation.deltaPerFrame *= deltaCoeff;
 				animation.onStart = [&]()
 					{
 						visibleCard.SetOpen(true);
@@ -388,9 +391,11 @@ namespace
 			{
 				Animation animation;
 				animation.finalState = state;
+				animation.deltaPerFrame *= deltaCoeff;
 				animation.onFinish = [&]()
 					{
 						visibleCard.SetOpen(IsOpen());
+						std::this_thread::sleep_for(std::chrono::seconds(1));
 					};
 				visibleCard.StartAnimation(animation);
 			}
@@ -521,7 +526,7 @@ namespace
 
 		void Hover(const std::optional<Card>& cardInfo)
 		{
-			constexpr float offset = 20.f;
+			constexpr float offset = 25.f;
 			constexpr float animationCoeff = 0.5;
 
 			const auto options = getDefaultStateOptions();
@@ -799,7 +804,7 @@ void UI::OnRoundStart(const Context& context, const Round& round)
 	_data->arrow.emplace(dir);
 
 	animate(context);
-	std::this_thread::sleep_for(std::chrono::seconds(2));
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 	_data->arrow.reset();
 }
 
@@ -828,6 +833,7 @@ void UI::OnPlayerShowTrumpCard(const Context& context, const Player& player, con
 
 	auto& playerCards = _data->game->playerCards.GetCards(player.GetId());
 	playerCards.ShowCard(card);
+	animate(context);
 }
 
 void UI::OnStartGame(const Context& context)
@@ -872,7 +878,6 @@ void UI::onPlayerPlaceCard(const Context& context, const Player& player, const C
 
 	_data->game->roundCards.MoveFrom(card, _data->game->playerCards.GetCards(player.GetId()));
 	animate(context);
-	std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
 sf::Vector2f UI::getDeckPosition() const
@@ -916,6 +921,7 @@ void UI::update(const Context& context, sf::Time delta)
 		Screen::Text text("click to start");
 		text.setOrigin(0.5f * size);
 		_window.draw(text);
+		finished = false;
 	}
 	else if (_data->game)
 	{
@@ -970,12 +976,14 @@ void UI::update(const Context& context, sf::Time delta)
 		Screen::Text text("victory");
 		text.setOrigin(0.5f * size);
 		_window.draw(text);
+		finished = false;
 	}
 	else if (_data->flags & Data::Flag::UserDefeat)
 	{
 		Screen::Text text("defeat");
 		text.setOrigin(0.5f * size);
 		_window.draw(text);
+		finished = false;
 	}
 
 	if (finished)

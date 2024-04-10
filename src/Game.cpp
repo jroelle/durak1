@@ -19,8 +19,13 @@ namespace
 		players.ForEach([&firstPlayer, trumpSuit](Player* player)
 			{
 				const auto card = player->FindLowestTrumpCard(trumpSuit);
-				if (card && (!firstPlayer || card->GetRank() < firstPlayer->second.GetRank()))
-					firstPlayer.emplace(player, *card);
+				if (card)
+				{
+					EventHandlers::Get().OnPlayerShowTrumpCard(*player, *card);
+
+					if (!firstPlayer || card->GetRank() < firstPlayer->second.GetRank())
+						firstPlayer.emplace(player, *card);
+				}
 
 				return firstPlayer && firstPlayer->second.GetRank() == Card::Rank::Min;
 			});
