@@ -625,6 +625,9 @@ struct UI::Data
 			Default			= 0,
 			NeedRedraw		= 1 << 0,
 			UserPickingCard = 1 << 1,
+			ClickToStart	= 1 << 2,
+			UserVictory		= 1 << 3,
+			UserDefeat		= 1 << 4,
 		};
 	};
 
@@ -650,18 +653,22 @@ struct UI::Data
 		sf::Vector2f direction;
 	};
 
-	Players playerCards;
-	RoundCards roundCards;
+	struct Game
+	{
+		Players playerCards;
+		RoundCards roundCards;
+
+		Game(const sf::View& view, size_t botsNumber)
+			: playerCards(view, botsNumber)
+			, roundCards(view)
+		{}
+	};
+
+	std::unique_ptr<Game> game;
 	std::underlying_type_t<Flag::Value> flags = Flag::Default;
 	sf::Vector2f cursorPosition;
 	std::optional<UserPick> userPick;
 	std::optional<Arrow> arrow;
-
-	Data(const sf::View& view, size_t botsNumber)
-		: playerCards(view, botsNumber)
-		, roundCards(view)
-	{
-	}
 };
 
 UI::UI(const std::string& title, unsigned int width, unsigned int height)
@@ -701,6 +708,10 @@ bool UI::HandleEvent(const sf::Event& event)
 			_data->flags &= ~Data::Flag::NeedRedraw;
 			_data->flags &= ~Data::Flag::UserPickingCard;
 		}
+		else if (_data->flags & Data::Flag::ClickToStart)
+		{
+			_data->flags &= ~Data::Flag::ClickToStart;
+		}
 		break;
 
 	case sf::Event::EventType::MouseMoved:
@@ -720,6 +731,9 @@ bool UI::IsLocked() const
 
 std::optional<Card> UI::UserPickCard(const Context& context, bool attacking, const PickCardFilter& filter)
 {
+	if (!_data)
+		return std::nullopt;
+
 	auto& userPick = _data->userPick.emplace();
 	userPick.options.filter = filter;
 	userPick.options.attacking = attacking;
@@ -748,7 +762,10 @@ void UI::OnPlayerDefend(const Context& context, const Player& defender, const Ca
 
 void UI::OnPlayerDrawDeckCards(const Context& context, const Player& player, const std::vector<Card>& cards)
 {
-	PlayerCards& playerCards = _data->playerCards.GetCards(player.GetId());
+	if (!_data || !_data->game)
+		return;
+
+	PlayerCards& playerCards = _data->game->playerCards.GetCards(player.GetId());
 	const sf::Vector2f startPosition = getDeckPosition();
 	for (const Card& cardInfo : cards)
 	{
@@ -759,18 +776,24 @@ void UI::OnPlayerDrawDeckCards(const Context& context, const Player& player, con
 
 void UI::OnPlayerDrawRoundCards(const Context& context, const Player& player, const std::vector<Card>& cards)
 {
-	PlayerCards& playerCards = _data->playerCards.GetCards(player.GetId());
+	if (!_data || !_data->game)
+		return;
+
+	PlayerCards& playerCards = _data->game->playerCards.GetCards(player.GetId());
 	for (const auto& cardInfo : cards)
 	{
-		playerCards.MoveFrom(cardInfo, _data->roundCards);
+		playerCards.MoveFrom(cardInfo, _data->game->roundCards);
 	}
 	animate(context);
 }
 
 void UI::OnRoundStart(const Context& context, const Round& round)
 {
-	const auto& attackerCards = _data->playerCards.GetCards(round.GetAttacker().GetId());
-	const auto& defenderCards = _data->playerCards.GetCards(round.GetDefender().GetId());
+	if (!_data || !_data->game)
+		return;
+
+	const auto& attackerCards = _data->game->playerCards.GetCards(round.GetAttacker().GetId());
+	const auto& defenderCards = _data->game->playerCards.GetCards(round.GetDefender().GetId());
 	sf::Vector2f dir = defenderCards.GetPosition() - attackerCards.GetPosition();
 	dir /= length(dir);
 	_data->arrow.emplace(dir);
@@ -782,45 +805,53 @@ void UI::OnRoundStart(const Context& context, const Round& round)
 
 void UI::OnRoundEnd(const Context& context, const Round& round)
 {
-	_data->roundCards.RemoveAll();
+	if (!_data || !_data->game)
+		return;
+
+	_data->game->roundCards.RemoveAll();
 	animate(context);
 }
 
 void UI::OnPlayersCreated(const Context& context, const PlayersGroup& players)
 {
-	_data = std::make_unique<Data>(_window.getView(), players.GetCount() - 1);
+	if (!_data)
+		return;
+
+	_data->game = std::make_unique<Data::Game>(_window.getView(), players.GetCount() - 1);
 	animate(context);
-	std::this_thread::sleep_for(std::chrono::seconds(3));
 }
 
 void UI::OnPlayerShowTrumpCard(const Context& context, const Player& player, const Card& card)
 {
+	if (!_data || !_data->game)
+		return;
+
+	auto& playerCards = _data->game->playerCards.GetCards(player.GetId());
+	playerCards.ShowCard(card);
 }
 
-void UI::OnStartGame(const Context& context, const Player& first)
+void UI::OnStartGame(const Context& context)
 {
-	const PlayersGroup& players = context.GetPlayers();
-	const Card::Suit trumpSuit = context.GetTrumpSuit();
-	players.ForEach([&](const Player* player)
-		{
-			if (const auto trumpCard = player->FindLowestTrumpCard(trumpSuit))
-			{
-				auto& playerCards = _data->playerCards.GetCards(player->GetId());
-				playerCards.ShowCard(*trumpCard);
-			}
-			return false;
-
-		}, players.GetUser());
+	_data = std::make_unique<Data>();
+	_data->flags |= Data::Flag::ClickToStart;
 	animate(context);
 }
 
 void UI::OnUserWin(const Context& context, const Player& user)
 {
+	if (!_data)
+		return;
+
+	_data->flags |= Data::Flag::UserVictory;
 	animate(context);
 }
 
 void UI::OnUserLose(const Context& context, const Player& opponent)
 {
+	if (!_data || !_data->game)
+		return;
+
+	_data->flags |= Data::Flag::UserDefeat;
 	animate(context);
 }
 
@@ -836,7 +867,10 @@ sf::Vector2i UI::toScreen(const sf::Vector2f& model) const
 
 void UI::onPlayerPlaceCard(const Context& context, const Player& player, const Card& card)
 {
-	_data->roundCards.MoveFrom(card, _data->playerCards.GetCards(player.GetId()));
+	if (!_data || !_data->game)
+		return;
+
+	_data->game->roundCards.MoveFrom(card, _data->game->playerCards.GetCards(player.GetId()));
 	animate(context);
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 }
@@ -849,6 +883,9 @@ sf::Vector2f UI::getDeckPosition() const
 
 void UI::animate(const Context& context)
 {
+	if (!_data)
+		return;
+
 	sf::Clock clock;
 	_data->flags |= Data::Flag::NeedRedraw;
 	while (NeedsToUpdate())
@@ -861,7 +898,7 @@ void UI::animate(const Context& context)
 
 void UI::update(const Context& context, sf::Time delta)
 {
-	if (!NeedsToUpdate() || !_window.isOpen())
+	if (!NeedsToUpdate() || !_window.isOpen() || !_data)
 		return;
 
 	constexpr float interactOffset = 2.5f;
@@ -873,51 +910,73 @@ void UI::update(const Context& context, sf::Time delta)
 		_window.draw(table);
 	}
 
+	bool finished = true;
+	if (_data->flags & Data::Flag::ClickToStart)
 	{
-		Screen::Deck deck(context.GetDeck());
-		deck.setOrigin(getDeckPosition());
-		_window.draw(deck);
+		Screen::Text text("click to start");
+		text.setOrigin(0.5f * size);
+		_window.draw(text);
 	}
-
-	auto& userCards = _data->playerCards.GetCards(context.GetPlayers().GetUser()->GetId());
-	if (_data->flags & Data::Flag::UserPickingCard)
+	else if (_data->game)
 	{
-		_data->userPick->result = {};
-		const bool isUserAttacking = _data->userPick->options.attacking;
-		const bool canSkip = !isUserAttacking || !_data->roundCards.IsEmpty();
-
-		if (canSkip)
 		{
-			Screen::SkipButton skipButton;
-			const sf::Vector2f center(0.5f * size.x, size.y - 1.5f * Screen::Card{}.getSize().y);
-			skipButton.setOrigin(center);
-			_window.draw(skipButton);
+			Screen::Deck deck(context.GetDeck());
+			deck.setOrigin(getDeckPosition());
+			_window.draw(deck);
+		}
 
-			if (::isPointInRectange(center, Screen::SkipButton::Size, Screen::SkipButton::Size, _data->cursorPosition, interactOffset))
+		auto& userCards = _data->game->playerCards.GetCards(context.GetPlayers().GetUser()->GetId());
+		if (_data->flags & Data::Flag::UserPickingCard)
+		{
+			_data->userPick->result = {};
+			const bool isUserAttacking = _data->userPick->options.attacking;
+			const bool canSkip = !isUserAttacking || !_data->game->roundCards.IsEmpty();
+
+			if (canSkip)
 			{
-				_data->userPick->result.emplace();
+				Screen::SkipButton skipButton;
+				const sf::Vector2f center(0.5f * size.x, size.y - 1.5f * Screen::Card{}.getSize().y);
+				skipButton.setOrigin(center);
+				_window.draw(skipButton);
+
+				if (::isPointInRectange(center, Screen::SkipButton::Size, Screen::SkipButton::Size, _data->cursorPosition, interactOffset))
+				{
+					_data->userPick->result.emplace();
+					cursorType = sf::Cursor::Hand;
+				}
+			}
+
+			if (auto pick = userCards.Pick(_data->cursorPosition, interactOffset, _data->userPick->options.filter))
+			{
+				_data->userPick->result.emplace(std::move(pick));
 				cursorType = sf::Cursor::Hand;
 			}
 		}
+		userCards.Hover(_data->userPick && _data->userPick->result && _data->userPick->result->card ? _data->userPick->result->card : std::nullopt);
 
-		if (auto pick = userCards.Pick(_data->cursorPosition, interactOffset, _data->userPick->options.filter))
+		if (_data->arrow)
 		{
-			_data->userPick->result.emplace(std::move(pick));
-			cursorType = sf::Cursor::Hand;
+			Screen::Arrow arrow(_data->arrow->direction);
+			arrow.setOrigin(0.5f * size);
+			_window.draw(arrow);
 		}
-	}
-	userCards.Hover(_data->userPick && _data->userPick->result && _data->userPick->result->card ? _data->userPick->result->card : std::nullopt);
 
-	if (_data->arrow)
+		finished = _data->game->playerCards.Draw(delta, _window) && finished;
+		finished = _data->game->roundCards.Draw(delta, _window) && finished;
+	}
+
+	if (_data->flags & Data::Flag::UserVictory)
 	{
-		Screen::Arrow arrow(_data->arrow->direction);
-		arrow.setOrigin(0.5f * size);
-		_window.draw(arrow);
+		Screen::Text text("victory");
+		text.setOrigin(0.5f * size);
+		_window.draw(text);
 	}
-
-	bool finished = true;
-	finished = _data->playerCards.Draw(delta, _window) && finished;
-	finished = _data->roundCards.Draw(delta, _window) && finished;
+	else if (_data->flags & Data::Flag::UserDefeat)
+	{
+		Screen::Text text("defeat");
+		text.setOrigin(0.5f * size);
+		_window.draw(text);
+	}
 
 	if (finished)
 		_data->flags &= ~Data::Flag::NeedRedraw;

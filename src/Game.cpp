@@ -69,9 +69,9 @@ namespace
 		{
 			callUI([&](UI& ui, const Context& context) { ui.OnPlayerShowTrumpCard(context, player, card); });
 		}
-		void OnStartGame(const Player& first) override
+		void OnStartGame() override
 		{
-			callUI([&](UI& ui, const Context& context) { ui.OnStartGame(context, first); });
+			callUI([&](UI& ui, const Context& context) { ui.OnStartGame(context); });
 		}
 		void OnUserWin(const Player& user) override
 		{
@@ -107,13 +107,13 @@ namespace
 
 		auto context = std::make_shared<Context>(ui);
 		GameEventHandler gameEventHandler(context);
+		EventHandlers::Get().OnStartGame();
 		context->Setup(1);
 
 		Player* firstPlayer = findFirstPlayer(context->GetPlayers(), context->GetTrumpSuit());
 		if (!firstPlayer)
 			return;
 
-		EventHandlers::Get().OnStartGame(*firstPlayer);
 		auto round = std::make_unique<Round>(*firstPlayer, context->GetPlayers().GetDefender(*firstPlayer));
 		while (round)
 		{

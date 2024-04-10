@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <memory>
+#include <SFML/System/String.hpp>
 #include <SFML/Graphics/Rect.hpp>
 #include <SFML/Graphics/Drawable.hpp>
 #include <SFML/Graphics/Transformable.hpp>
@@ -95,5 +96,20 @@ namespace Screen
 
 	private:
 		sf::Vector2f _direction;
+	};
+
+	class Text final : public Drawing
+	{
+	public:
+		static constexpr unsigned int CharacterSize = 25;
+
+		Text(const sf::String&);
+
+	private:
+		void run(sf::RenderTarget&) const override;
+		const sf::Font& getFont() const;
+
+	private:
+		sf::String _string;
 	};
 }

@@ -429,4 +429,28 @@ namespace Screen
 		holder.rotate(angleDegree({ 0.f, -1.f }, _direction));
 		target.draw(holder);
 	}
+
+	Text::Text(const sf::String& string)
+		: _string(string)
+	{
+	}
+
+	void Text::run(sf::RenderTarget& target) const
+	{
+		sf::Text text(_string, getFont(), CharacterSize);
+		text.setFillColor(Color::LightGrayGreen);
+		text.setOutlineColor(Color::DarkBrown);
+		text.setOutlineThickness(1.f);
+
+		const auto size = text.getLocalBounds().getSize();
+		text.setOrigin({ 0.5f * size.x, size.y });
+
+		target.draw(text);
+	}
+
+	const sf::Font& Text::getFont() const
+	{
+		static sf::Font font = loadFont("Flexi_IBM_VGA_False_0.ttf");
+		return font;
+	}
 }
