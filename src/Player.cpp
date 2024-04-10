@@ -8,7 +8,7 @@ Player::Player(Id id)
 	: _id(id)
 {}
 
-std::optional<Card> Player::Attack(const Context& context, const AttackFilter& filter)
+std::optional<Card> Player::Attack(const Context& context, const CardFilter& filter)
 {
 	const auto attackCard = pickAttackCard(context, filter);
 	if (attackCard)
@@ -19,9 +19,9 @@ std::optional<Card> Player::Attack(const Context& context, const AttackFilter& f
 	return attackCard;
 }
 
-std::optional<Card> Player::Defend(const Context& context, const DefendFilter& defendFilter)
+std::optional<Card> Player::Defend(const Context& context, const CardFilter& filter)
 {
-	const auto defendCard = pickDefendCard(context, defendFilter);
+	const auto defendCard = pickDefendCard(context, filter);
 	if (defendCard)
 	{
 		removeCard(defendCard);

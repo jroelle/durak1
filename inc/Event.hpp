@@ -25,6 +25,7 @@ public:
 	virtual void OnRoundEnd(const Round&) {}
 
 	virtual void OnPlayersCreated(const PlayersGroup&) {}
+	virtual void OnPlayerShowTrumpCard(const Player&, const Card&) {}
 	virtual void OnStartGame(const Player& first) {}
 	virtual void OnUserWin(const Player& user) {}
 	virtual void OnUserLose(const Player& opponent) {}

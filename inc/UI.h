@@ -38,6 +38,7 @@ public:
 	void OnRoundStart(const Context&, const Round&);
 	void OnRoundEnd(const Context&, const Round&);
 	void OnPlayersCreated(const Context&, const PlayersGroup&);
+	void OnPlayerShowTrumpCard(const Context&, const Player&, const Card&);
 	void OnStartGame(const Context&, const Player& first);
 	void OnUserWin(const Context&, const Player& user);
 	void OnUserLose(const Context&, const Player& opponent);

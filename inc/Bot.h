@@ -1,10 +1,12 @@
 #pragma once
 #include <stdint.h>
+#include <memory>
 #include "Player.h"
 
 class Bot final : public Player
 {
 public:
+	class Behavior;
 	enum class Difficulty : uint8_t
 	{
 		Easy,
@@ -15,17 +17,12 @@ public:
 	};
 
 	Bot(Id, Difficulty);
+	~Bot();
 
 protected:
-	std::optional<Card> pickAttackCard(const Context&, const AttackFilter&) const override;
-	std::optional<Card> pickDefendCard(const Context&, const DefendFilter&) const override;
+	std::optional<Card> pickAttackCard(const Context&, const CardFilter&) const override;
+	std::optional<Card> pickDefendCard(const Context&, const CardFilter&) const override;
 
 private:
-	struct Memory
-	{
-		// TODO
-	};
-
-	const Difficulty _difficulty;
-	Memory _memory;
+	std::unique_ptr<Behavior> _behavior;
 };

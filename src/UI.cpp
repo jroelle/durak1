@@ -312,14 +312,6 @@ namespace
 			return _cards.empty();
 		}
 
-		bool Contains(Card::Rank rank) const
-		{
-			return _cards.for_each([rank](const VisibleCard& visibleCard)
-				{
-					return rank == visibleCard.GetCardInfo().GetRank();
-				});
-		}
-
 	protected:
 		void onCardAdded(VisibleCard& cardAdded) override
 		{
@@ -798,6 +790,10 @@ void UI::OnPlayersCreated(const Context& context, const PlayersGroup& players)
 	_data = std::make_unique<Data>(_window.getView(), players.GetCount() - 1);
 	animate(context);
 	std::this_thread::sleep_for(std::chrono::seconds(3));
+}
+
+void UI::OnPlayerShowTrumpCard(const Context& context, const Player& player, const Card& card)
+{
 }
 
 void UI::OnStartGame(const Context& context, const Player& first)

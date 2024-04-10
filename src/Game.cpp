@@ -37,43 +37,47 @@ namespace
 			EventHandlers::Get().Add(this);
 		}
 
-		void OnPlayerAttack(const Player& player, const Card& card)
+		void OnPlayerAttack(const Player& player, const Card& card) override
 		{
 			callUI([&](UI& ui, const Context& context) { ui.OnPlayerAttack(context, player, card); });
 		}
-		void OnPlayerDefend(const Player& player, const Card& card)
+		void OnPlayerDefend(const Player& player, const Card& card) override
 		{
 			callUI([&](UI& ui, const Context& context) { ui.OnPlayerDefend(context, player, card); });
 		}
-		void OnPlayerDrawDeckCards(const Player& player, const std::vector<Card>& cards)
+		void OnPlayerDrawDeckCards(const Player& player, const std::vector<Card>& cards) override
 		{
 			callUI([&](UI& ui, const Context& context) { ui.OnPlayerDrawDeckCards(context, player, cards); });
 		}
-		void OnPlayerDrawRoundCards(const Player& player, const std::vector<Card>& cards)
+		void OnPlayerDrawRoundCards(const Player& player, const std::vector<Card>& cards) override
 		{
 			callUI([&](UI& ui, const Context& context) { ui.OnPlayerDrawRoundCards(context, player, cards); });
 		}
-		void OnRoundStart(const Round& round)
+		void OnRoundStart(const Round& round) override
 		{
 			callUI([&](UI& ui, const Context& context) { ui.OnRoundStart(context, round); });
 		}
-		void OnRoundEnd(const Round& round)
+		void OnRoundEnd(const Round& round) override
 		{
 			callUI([&](UI& ui, const Context& context) { ui.OnRoundEnd(context, round); });
 		}
-		void OnPlayersCreated(const PlayersGroup& players)
+		void OnPlayersCreated(const PlayersGroup& players) override
 		{
 			callUI([&](UI& ui, const Context& context) { ui.OnPlayersCreated(context, players); });
 		}
-		void OnStartGame(const Player& first)
+		void OnPlayerShowTrumpCard(const Player& player, const Card& card) override
+		{
+			callUI([&](UI& ui, const Context& context) { ui.OnPlayerShowTrumpCard(context, player, card); });
+		}
+		void OnStartGame(const Player& first) override
 		{
 			callUI([&](UI& ui, const Context& context) { ui.OnStartGame(context, first); });
 		}
-		void OnUserWin(const Player& user)
+		void OnUserWin(const Player& user) override
 		{
 			callUI([&](UI& ui, const Context& context) { ui.OnUserWin(context, user); });
 		}
-		void OnUserLose(const Player& opponent)
+		void OnUserLose(const Player& opponent) override
 		{
 			callUI([&](UI& ui, const Context& context) { ui.OnUserLose(context, opponent); });
 		}

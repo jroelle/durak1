@@ -8,7 +8,7 @@ PlayersGroup::PlayersGroup(size_t botsNumber)
 	Player::Id id = 0;
 	_user = _playerLoop.push_back(PlayerLoop::element::make_holder<User>(id++));
 	for (size_t i = 0; i < botsNumber; ++i)
-		_playerLoop.push_back(PlayerLoop::element::make_holder<Bot>(id++, Bot::Difficulty::Medium));
+		_playerLoop.push_back(PlayerLoop::element::make_holder<Bot>(id++, Bot::Difficulty::Easy));
 }
 
 PlayersGroup::~PlayersGroup()
