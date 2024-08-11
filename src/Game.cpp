@@ -1,5 +1,4 @@
 #include "Game.h"
-#include <mutex>
 #include <thread>
 #include <SFML/System/Clock.hpp>
 #include "Context.h"
@@ -10,8 +9,6 @@
 
 namespace
 {
-	std::mutex g_mutex;
-
 	inline Player* findFirstPlayer(const PlayersGroup& players, Card::Suit trumpSuit)
 	{
 		std::optional<std::pair<Player*, Card>> firstPlayer;
@@ -142,15 +139,11 @@ void Game::Run()
 		{
 			if (event.type == sf::Event::Closed)
 			{
-				std::lock_guard<std::mutex> guard(g_mutex);
 				window.close();
 				return;
 			}
 
-			{
-				std::lock_guard<std::mutex> guard(g_mutex);
-				ui->HandleEvent(event);
-			}
+			ui->HandleEvent(event);
 		}
 	}
 }

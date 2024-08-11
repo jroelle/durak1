@@ -1,4 +1,5 @@
 #include "UI.h"
+#include <mutex>
 #include <queue>
 #include <thread>
 #include <SFML/Graphics/RenderWindow.hpp>
@@ -14,6 +15,8 @@
 
 namespace
 {
+	std::mutex g_mutex;
+
 	inline sf::Vector2f getCardSize()
 	{
 		return Screen::Card{}.getSize();
@@ -702,6 +705,8 @@ bool UI::NeedsToUpdate() const
 
 bool UI::HandleEvent(const sf::Event& event)
 {
+	std::lock_guard<std::mutex> guard(g_mutex);
+
 	if (!_data)
 		return false;
 
@@ -903,6 +908,8 @@ void UI::animate(const Context& context)
 
 void UI::update(const Context& context, sf::Time delta)
 {
+	std::lock_guard<std::mutex> guard(g_mutex);
+
 	if (!NeedsToUpdate() || !_window.isOpen() || !_data)
 		return;
 
