@@ -38,6 +38,7 @@ public:
 	bool operator==(const Card&) const = default;
 	Card& operator=(const Card&) = default;
 	Card& operator=(Card&&) = default;
+	bool operator<(const Card&) const;
 
 	Suit GetSuit() const;
 	Rank GetRank() const;

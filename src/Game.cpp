@@ -30,13 +30,12 @@ namespace
 		return firstPlayer ? firstPlayer->first : players.GetUser();
 	}
 
-	class GameEventHandler final : public EventHandler
+	class GameEventHandler final : public AutoEventHandler
 	{
 	public:
 		GameEventHandler(std::weak_ptr<Context> context)
 			: _context(context)
 		{
-			EventHandlers::Get().Add(this);
 		}
 
 		void OnPlayerAttack(const Player& player, const Card& card) override

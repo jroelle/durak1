@@ -8,9 +8,9 @@ Player::Player(Id id)
 	: _id(id)
 {}
 
-std::optional<Card> Player::Attack(const Context& context, const CardFilter& filter)
+std::optional<Card> Player::Attack(const Context& context, const Player& defender, const CardFilter& filter)
 {
-	const auto attackCard = pickAttackCard(context, filter);
+	const auto attackCard = pickAttackCard(context, defender, filter);
 	if (attackCard)
 	{
 		removeCard(attackCard);
@@ -19,9 +19,9 @@ std::optional<Card> Player::Attack(const Context& context, const CardFilter& fil
 	return attackCard;
 }
 
-std::optional<Card> Player::Defend(const Context& context, const CardFilter& filter)
+std::optional<Card> Player::Defend(const Context& context, const Player& attacker, const CardFilter& filter)
 {
-	const auto defendCard = pickDefendCard(context, filter);
+	const auto defendCard = pickDefendCard(context, attacker, filter);
 	if (defendCard)
 	{
 		removeCard(defendCard);
@@ -44,6 +44,13 @@ Player& Player::DrawCards(Deck& deck)
 	}
 
 	EventHandlers::Get().OnPlayerDrawDeckCards(*this, eventCards);
+	return *this;
+}
+
+Player& Player::DrawCards(const std::vector<Card>& cards)
+{
+	EventHandlers::Get().OnPlayerDrawRoundCards(*this, cards);
+	_hand.AddCards(cards.begin(), cards.end());
 	return *this;
 }
 

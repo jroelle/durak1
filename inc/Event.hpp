@@ -34,17 +34,20 @@ public:
 class EventHandlers final : public EventHandler
 {
 public:
-	using Variant = std::variant<std::weak_ptr<EventHandler>, EventHandler*>;
-
 	static EventHandlers& Get()
 	{
-		static EventHandlers s_this;
-		return s_this;
+		static EventHandlers s_instance;
+		return s_instance;
 	}
 
-	void Add(Variant variant)
+	inline void Add(EventHandler* handler)
 	{
-		_handlers.push_front(variant);
+		_handlers.push_front(handler);
+	}
+
+	inline void Remove(EventHandler* handler)
+	{
+		_handlers.remove(handler);
 	}
 
 public:
@@ -97,21 +100,24 @@ private:
 	template<typename F>
 	void forEach(const F& func)
 	{
-		for (auto& variant : _handlers)
-		{
-			switch (variant.index())
-			{
-			case 0:
-				func(std::get<0>(variant).lock().get());
-				break;
-
-			case 1:
-				func(std::get<1>(variant));
-				break;
-			}
-		}
+		for (EventHandler* handler : _handlers)
+			func(handler);
 	}
 
 private:
-	static inline std::forward_list<Variant> _handlers;
+	std::forward_list<EventHandler*> _handlers;
+};
+
+class AutoEventHandler : private EventHandler
+{
+public:
+	AutoEventHandler()
+	{
+		EventHandlers::Get().Add(this);
+	}
+
+	~AutoEventHandler()
+	{
+		EventHandlers::Get().Remove(this);
+	}
 };

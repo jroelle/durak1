@@ -17,10 +17,11 @@ public:
 	Player(Id);
 	virtual ~Player() = default;
 
-	std::optional<Card> Attack(const Context&, const CardFilter&);
-	std::optional<Card> Defend(const Context&, const CardFilter&);
+	std::optional<Card> Attack(const Context&, const Player& defender, const CardFilter&);
+	std::optional<Card> Defend(const Context&, const Player& attacker, const CardFilter&);
 
 	Player& DrawCards(Deck&);
+	Player& DrawCards(const std::vector<Card>&);
 	Player& DrawCards(std::vector<Card>&&);
 	std::optional<Card> FindLowestTrumpCard(Card::Suit) const;
 	Id GetId() const;
@@ -31,8 +32,8 @@ public:
 protected:
 	Player() = default;
 
-	virtual std::optional<Card> pickAttackCard(const Context&, const CardFilter&) const = 0;
-	virtual std::optional<Card> pickDefendCard(const Context&, const CardFilter&) const = 0;
+	virtual std::optional<Card> pickAttackCard(const Context&, const Player& defender, const CardFilter&) const = 0;
+	virtual std::optional<Card> pickDefendCard(const Context&, const Player& attacker, const CardFilter&) const = 0;
 	
 private:
 	void removeCard(const std::optional<Card>&);

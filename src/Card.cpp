@@ -6,6 +6,14 @@ Card::Card(Suit suit, Rank rank)
 {
 }
 
+bool Card::operator<(const Card& card) const
+{
+	if (_suit == card._suit)
+		return _rank < card._rank;
+	else
+		return _suit < card._suit;
+}
+
 Card::Suit Card::GetSuit() const
 {
 	return _suit;
