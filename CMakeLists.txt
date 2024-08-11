@@ -4,7 +4,7 @@ project(durak1)
 
 set(SFML_STATIC_LIBRARIES TRUE)
 
-find_package(SFML 2.6 COMPONENTS graphics window system main CONFIG REQUIRED)
+find_package(SFML 2.6 COMPONENTS graphics main CONFIG REQUIRED)
 
 add_executable(durak1 main.cpp
 					"inc/Bot.h"
@@ -41,7 +41,7 @@ add_executable(durak1 main.cpp
 
 target_link_options(durak1 PRIVATE "/SUBSYSTEM:WINDOWS")
 
-target_link_libraries(durak1 PRIVATE sfml-graphics sfml-window sfml-system sfml-main)
+target_link_libraries(durak1 PRIVATE sfml-graphics sfml-main)
 
 target_include_directories(durak1 PRIVATE inc)
 
