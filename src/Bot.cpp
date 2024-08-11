@@ -148,12 +148,16 @@ namespace
 	protected:
 		std::optional<Card> pickAttackCard(const Context& context, const Player& defender, std::vector<Card>&& filteredCards) const override
 		{
-			return pickCard(context, 0.5, std::move(filteredCards));
+			const auto& deck = context.GetDeck();
+			const double pickTrumpChance = getDiscardDeckRatio(deck);
+			return pickCard(context, pickTrumpChance, std::move(filteredCards));
 		}
 
 		std::optional<Card> pickDefendCard(const Context& context, const Player& attacker, std::vector<Card>&& filteredCards) const override
 		{
-			return pickCard(context, 0.8, std::move(filteredCards));
+			const auto& deck = context.GetDeck();
+			const double pickTrumpChance = deck.GetCount() <= 10 ? 1. : getDiscardDeckRatio(deck) * 0.8;
+			return pickCard(context, pickTrumpChance, std::move(filteredCards));
 		}
 
 		static void sort(std::vector<Card>& cards, Card::Suit trumpSuit)
@@ -173,6 +177,11 @@ namespace
 
 					return a.GetRank() < b.GetRank();
 				});
+		}
+
+		static double getDiscardDeckRatio(const Deck& deck)
+		{
+			return static_cast<double>(deck.GetMaxCount() - deck.GetCount()) / deck.GetMaxCount();
 		}
 
 	private:
