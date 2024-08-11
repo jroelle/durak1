@@ -713,7 +713,7 @@ bool UI::HandleEvent(const sf::Event& event)
 	switch (event.type)
 	{
 	case sf::Event::EventType::MouseButtonPressed:
-		if (_data->userPick.has_value() && (_data->flags & Data::Flag::UserPickingCard))
+		if (_data->userPick && _data->userPick->result && (_data->flags & Data::Flag::UserPickingCard))
 		{
 			_data->flags &= ~Data::Flag::NeedRedraw;
 			_data->flags &= ~Data::Flag::UserPickingCard;
