@@ -27,7 +27,7 @@ public:
 
 	virtual void OnPlayersCreated(const PlayersGroup&) {}
 	virtual void OnPlayerShowTrumpCard(const Player&, const Card&) {}
-	virtual void OnStartGame(Settings&) {}
+	virtual void OnStartGame() {}
 	virtual void OnUserWin(const Player& user) {}
 	virtual void OnUserLose(const Player& opponent) {}
 };
@@ -84,9 +84,9 @@ public:
 	{
 		forEach([&](EventHandler* handler) { handler->OnPlayerShowTrumpCard(player, card); });
 	}
-	void OnStartGame(Settings& settings) override
+	void OnStartGame() override
 	{
-		forEach([&](EventHandler* handler) { handler->OnStartGame(settings); });
+		forEach([&](EventHandler* handler) { handler->OnStartGame(); });
 	}
 	void OnUserWin(const Player& user) override
 	{

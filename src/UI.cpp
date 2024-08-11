@@ -990,10 +990,9 @@ void UI::OnPlayerShowTrumpCard(const Context& context, const Player& player, con
 	animate(context);
 }
 
-void UI::OnStartGame(const Context& context, Settings& settings)
+void UI::OnStartGame(const Context& context)
 {
 	_data = std::make_unique<Data>();
-	SetSettings(context, settings);
 }
 
 void UI::OnUserWin(const Context& context, const Player& user)

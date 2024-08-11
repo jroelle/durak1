@@ -71,9 +71,9 @@ namespace
 		{
 			callUI([&](UI& ui, const Context& context) { ui.OnPlayerShowTrumpCard(context, player, card); });
 		}
-		void OnStartGame(Settings& settings) override
+		void OnStartGame() override
 		{
-			callUI([&](UI& ui, const Context& context) { ui.OnStartGame(context, settings); });
+			callUI([&](UI& ui, const Context& context) { ui.OnStartGame(context); });
 		}
 		void OnUserWin(const Player& user) override
 		{
@@ -111,7 +111,8 @@ namespace
 		UIEventHandler uiEventHandler(context);
 
 		Settings settings;
-		EventHandlers::Get().OnStartGame(settings);
+		EventHandlers::Get().OnStartGame();
+		ui->SetSettings(*context, settings);
 		context->Setup(settings);
 
 		Player* firstPlayer = findFirstPlayer(context->GetPlayers(), context->GetTrumpSuit());
