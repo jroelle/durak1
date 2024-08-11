@@ -31,10 +31,10 @@ namespace
 		return firstPlayer ? firstPlayer->first : players.GetUser();
 	}
 
-	class GameEventHandler final : public AutoEventHandler
+	class UIEventHandler final : public AutoEventHandler
 	{
 	public:
-		GameEventHandler(std::weak_ptr<Context> context)
+		UIEventHandler(std::weak_ptr<Context> context)
 			: _context(context)
 		{
 		}
@@ -108,7 +108,7 @@ namespace
 		}
 
 		auto context = std::make_shared<Context>(ui);
-		GameEventHandler gameEventHandler(context);
+		UIEventHandler uiEventHandler(context);
 
 		Settings settings;
 		EventHandlers::Get().OnStartGame(settings);
