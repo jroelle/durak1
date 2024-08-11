@@ -39,6 +39,8 @@ add_executable(durak1 main.cpp
 					"inc/Vector.h"
 )
 
+target_link_options(durak1 PRIVATE "/SUBSYSTEM:WINDOWS")
+
 target_link_libraries(durak1 PRIVATE sfml-graphics sfml-window sfml-system sfml-main)
 
 target_include_directories(durak1 PRIVATE inc)
