@@ -13,6 +13,7 @@ namespace sf
 	class Font;
 	class RenderTarget;
 	class RenderStates;
+	class Text;
 }
 class Deck;
 
@@ -103,11 +104,15 @@ namespace Screen
 	public:
 		static constexpr unsigned int CharacterSize = 25;
 
+		Text() = default;
 		Text(const sf::String&);
+		void set(const sf::String&);
+		sf::FloatRect getLocalBounds() const;
 
 	private:
 		void run(sf::RenderTarget&) const override;
 		const sf::Font& getFont() const;
+		sf::Text createText() const;
 
 	private:
 		sf::String _string;

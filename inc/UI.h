@@ -17,6 +17,7 @@ class Deck;
 class Context;
 class User;
 class PlayersGroup;
+struct Settings;
 
 class UI final : public IController
 {
@@ -28,8 +29,9 @@ public:
 	const sf::RenderWindow& GetWindow() const;
 	bool NeedsToUpdate() const;
 	bool HandleEvent(const sf::Event&);
-	bool IsLocked() const;
+	void Pick(const Context&, std::shared_ptr<UserPick>) override;
 	std::optional<Card> UserPickCard(const Context&, bool attacking, const PickCardFilter&) override;
+	void SetSettings(const Context&, Settings&) override;
 
 	void OnPlayerAttack(const Context&, const Player&, const Card&);
 	void OnPlayerDefend(const Context&, const Player&, const Card&);
@@ -39,7 +41,7 @@ public:
 	void OnRoundEnd(const Context&, const Round&);
 	void OnPlayersCreated(const Context&, const PlayersGroup&);
 	void OnPlayerShowTrumpCard(const Context&, const Player&, const Card&);
-	void OnStartGame(const Context&);
+	void OnStartGame(const Context&, Settings&);
 	void OnUserWin(const Context&, const Player& user);
 	void OnUserLose(const Context&, const Player& opponent);
 

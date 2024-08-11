@@ -3,12 +3,12 @@
 #include "User.h"
 #include "Bot.h"
 
-PlayersGroup::PlayersGroup(size_t botsNumber)
+PlayersGroup::PlayersGroup(const Settings& settings)
 {
 	Player::Id id = 0;
 	_user = _playerLoop.push_back(PlayerLoop::element::make_holder<User>(id++));
-	for (size_t i = 0; i < botsNumber; ++i)
-		_playerLoop.push_back(PlayerLoop::element::make_holder<Bot>(id++, Bot::Difficulty::Medium));
+	for (size_t i = 0; i < settings.botsNumber; ++i)
+		_playerLoop.push_back(PlayerLoop::element::make_holder<Bot>(id++, settings.difficulty));
 }
 
 PlayersGroup::~PlayersGroup()

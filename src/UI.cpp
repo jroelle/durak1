@@ -12,9 +12,11 @@
 #include "Player.h"
 #include "PlayersGroup.h"
 #include "Vector.h"
+#include "Bot.h"
 
 namespace
 {
+	constexpr float InteractOffset = 5.f;
 	std::mutex g_mutex;
 
 	inline sf::Vector2f getCardSize()
@@ -622,6 +624,138 @@ namespace
 		using Index = Player::Id;
 		std::vector<std::unique_ptr<PlayerCards>> _players;
 	};
+
+	class CardPick : public UI::UserPick
+	{
+	public:
+		struct Options
+		{
+			enum Flags : unsigned
+			{
+				None = 0,
+				Attacking = 1 << 0,
+				Skippable = 1 << 1,
+			};
+		};
+
+		struct Result
+		{
+			std::optional<Card> card;
+		};
+
+		using PlayerCardsGetter = std::function<PlayerCards&()>;
+		using Filter = IController::PickCardFilter;
+
+		CardPick(const PlayerCardsGetter& playerCardsGetter, Options::Flags flags, const Filter& filter)
+			: _playerCardsGetter(playerCardsGetter)
+			, _flags(flags)
+			, _filter(filter)
+		{
+		}
+
+		bool Hover(sf::RenderTarget& target, const sf::Vector2f& cursor) override
+		{
+			bool hovered = false;
+			if (_flags & Options::Flags::Skippable)
+			{
+				Screen::SkipButton skipButton;
+				const auto size = target.getView().getSize();
+				const sf::Vector2f center(0.5f * size.x, size.y - 1.5f * Screen::Card{}.getSize().y);
+				skipButton.setOrigin(center);
+				target.draw(skipButton);
+
+				if (::isPointInRectange(center, Screen::SkipButton::Size, Screen::SkipButton::Size, cursor, InteractOffset))
+				{
+					_result.emplace();
+					hovered = true;
+				}
+			}
+
+			PlayerCards& userCards = _playerCardsGetter();
+			if (auto pick = userCards.Pick(cursor, InteractOffset, _filter))
+			{
+				_result.emplace(std::move(pick));
+				hovered = true;
+			}
+			userCards.Hover(_result ? _result->card : std::nullopt);
+			return hovered;
+		}
+
+		void ResetResult() override
+		{
+			_result.reset();
+		}
+
+		bool HasResult() const override
+		{
+			return _result.has_value();
+		}
+
+		const std::optional<Result>& GetResult() const
+		{
+			return _result;
+		}
+
+	private:
+		PlayerCardsGetter _playerCardsGetter;
+		Options::Flags _flags = Options::Flags::None;
+		Filter _filter;
+		std::optional<Result> _result;
+	};
+
+	class DifficultyPick : public UI::UserPick
+	{
+	public:
+		bool Hover(sf::RenderTarget& target, const sf::Vector2f& cursor) override
+		{
+			constexpr float spacing = Screen::Text::CharacterSize * 2.f;
+			constexpr size_t textCount = 2; /*static_cast<size_t>(Difficulty::Count);*/ // TODO
+			const auto size = target.getView().getSize();
+
+			bool hovered = false;
+			const auto createText = [&](const sf::String& string, Settings::Difficulty difficulty, size_t index)
+				{
+					Screen::Text text;
+					text.set(string);
+					sf::Vector2f origin = 0.5f * size;
+					origin.y += spacing * (index + 0.5f - 0.5f * textCount);
+					text.setOrigin(origin);
+					target.draw(text);
+
+					const auto bounds = text.getLocalBounds();
+					if (::isPointInRectange(origin, bounds.width, bounds.height, cursor, InteractOffset))
+					{
+						_difficulty = difficulty;
+						return true;
+					}
+					return false;
+				};
+
+			size_t index = 0;
+			hovered = createText("easy", Settings::Difficulty::Easy, index++) || hovered;
+			hovered = createText("medium", Settings::Difficulty::Medium, index++) || hovered;
+			// hovered = createText("hard", Settings::Difficulty::Hard, index++) || hovered; // TODO
+			return hovered;
+		}
+
+		void ResetResult() override
+		{
+			_difficulty.reset();
+		}
+
+		bool HasResult() const override
+		{
+			return _difficulty.has_value();
+		}
+
+		const std::optional<Settings::Difficulty>& GetResult() const
+		{
+			return _difficulty;
+		}
+
+	private:
+		std::optional<Settings::Difficulty> _difficulty;
+	};
 }
 
 struct UI::Data
@@ -632,28 +766,10 @@ struct UI::Data
 		{
 			Default			= 0,
 			NeedRedraw		= 1 << 0,
-			UserPickingCard = 1 << 1,
-			ClickToStart	= 1 << 2,
-			UserVictory		= 1 << 3,
-			UserDefeat		= 1 << 4,
+			HideCards		= 1 << 1,
+			UserVictory		= 1 << 2,
+			UserDefeat		= 1 << 3,
 		};
-	};
-
-	struct UserPick
-	{
-		struct Options
-		{
-			PickCardFilter filter;
-			bool attacking = false;
-		};
-
-		struct Result
-		{
-			std::optional<Card> card;
-		};
-
-		Options options;
-		std::optional<Result> result;
 	};
 
 	struct Arrow
@@ -675,7 +791,7 @@ struct UI::Data
 	std::unique_ptr<Game> game;
 	std::underlying_type_t<Flag::Value> flags = Flag::Default;
 	sf::Vector2f cursorPosition;
-	std::optional<UserPick> userPick;
+	std::shared_ptr<UserPick> userPick;
 	std::optional<Arrow> arrow;
 };
 
@@ -713,20 +829,16 @@ bool UI::HandleEvent(const sf::Event& event)
 	switch (event.type)
 	{
 	case sf::Event::EventType::MouseButtonPressed:
-		if (_data->userPick && _data->userPick->result && (_data->flags & Data::Flag::UserPickingCard))
+		if (_data->userPick && _data->userPick->HasResult())
 		{
+			_data->userPick.reset();
 			_data->flags &= ~Data::Flag::NeedRedraw;
-			_data->flags &= ~Data::Flag::UserPickingCard;
-		}
-		else if (_data->flags & Data::Flag::ClickToStart)
-		{
-			_data->flags &= ~Data::Flag::ClickToStart;
 		}
 		break;
 
 	case sf::Event::EventType::MouseMoved:
 		_data->cursorPosition = toModel({ event.mouseMove.x, event.mouseMove.y });
-		if (_data->flags & Data::Flag::UserPickingCard)
+		if (_data->userPick)
 			_data->flags |= Data::Flag::NeedRedraw;
 		break;
 	}
@@ -734,9 +846,14 @@ bool UI::HandleEvent(const sf::Event& event)
 	return false;
 }
 
-bool UI::IsLocked() const
+void UI::Pick(const Context& context, std::shared_ptr<UserPick> userPick)
 {
-	return _data && (_data->flags & Data::Flag::NeedRedraw);
+	if (!_data)
+		return;
+
+	_data->userPick = userPick;
+	while (_data->userPick)
+		animate(context);
 }
 
 std::optional<Card> UI::UserPickCard(const Context& context, bool attacking, const PickCardFilter& filter)
@@ -744,20 +861,39 @@ std::optional<Card> UI::UserPickCard(const Context& context, bool attacking, con
 	if (!_data)
 		return std::nullopt;
 
-	auto& userPick = _data->userPick.emplace();
-	userPick.options.filter = filter;
-	userPick.options.attacking = attacking;
-	_data->flags |= Data::Flag::UserPickingCard;
+	std::underlying_type_t<CardPick::Options::Flags> flags = CardPick::Options::Flags::None;
 
-	while (_data->flags & Data::Flag::UserPickingCard)
-		animate(context);
+	if (attacking)
+		flags |= CardPick::Options::Flags::Attacking;
+	if (!attacking || !_data->game->roundCards.IsEmpty())
+		flags |= CardPick::Options::Flags::Skippable;
+
+	auto userPick = std::make_shared<CardPick>([this, &context]() -> PlayerCards&
+		{
+			return _data->game->playerCards.GetCards(context.GetPlayers().GetUser()->GetId());
+		}, static_cast<CardPick::Options::Flags>(flags), filter);
+
+	Pick(context, userPick);
 
 	std::optional<Card> card;
-	if (userPick.result && userPick.result->card)
-		card = userPick.result->card;
+	if (userPick->GetResult())
+		card = userPick->GetResult()->card;
 
-	_data->userPick.reset();
 	return card;
+}
+
+void UI::SetSettings(const Context& context, Settings& settings)
+{
+	if (!_data)
+		return;
+
+	auto userPick = std::make_shared<DifficultyPick>();
+	_data->flags |= Data::Flag::HideCards;
+	Pick(context, userPick);
+	_data->flags &= ~Data::Flag::HideCards;
+
+	if (userPick->GetResult())
+		settings.difficulty = userPick->GetResult().value();
 }
 
 void UI::OnPlayerAttack(const Context& context, const Player& attacker, const Card& attackCard)
@@ -841,11 +977,10 @@ void UI::OnPlayerShowTrumpCard(const Context& context, const Player& player, con
 	animate(context);
 }
 
-void UI::OnStartGame(const Context& context)
+void UI::OnStartGame(const Context& context, Settings& settings)
 {
 	_data = std::make_unique<Data>();
-	_data->flags |= Data::Flag::ClickToStart;
-	animate(context);
+	SetSettings(context, settings);
 }
 
 void UI::OnUserWin(const Context& context, const Player& user)
@@ -913,7 +1048,6 @@ void UI::update(const Context& context, sf::Time delta)
 	if (!NeedsToUpdate() || !_window.isOpen() || !_data)
 		return;
 
-	constexpr float interactOffset = 5.f;
 	const auto size = _window.getView().getSize();
 	sf::Cursor::Type cursorType = sf::Cursor::Arrow;
 
@@ -923,49 +1057,21 @@ void UI::update(const Context& context, sf::Time delta)
 	}
 
 	bool finished = true;
-	if (_data->flags & Data::Flag::ClickToStart)
+
+	if (_data->userPick)
 	{
-		Screen::Text text("click to start");
-		text.setOrigin(0.5f * size);
-		_window.draw(text);
-		finished = false;
+		_data->userPick->ResetResult();
+		if (_data->userPick->Hover(_window, _data->cursorPosition))
+			cursorType = sf::Cursor::Hand;
 	}
-	else if (_data->game)
+
+	if (_data->game && !(_data->flags & Data::Flag::HideCards))
 	{
 		{
 			Screen::Deck deck(context.GetDeck());
 			deck.setOrigin(getDeckPosition());
 			_window.draw(deck);
 		}
-
-		auto& userCards = _data->game->playerCards.GetCards(context.GetPlayers().GetUser()->GetId());
-		if (_data->flags & Data::Flag::UserPickingCard)
-		{
-			_data->userPick->result = {};
-			const bool isUserAttacking = _data->userPick->options.attacking;
-			const bool canSkip = !isUserAttacking || !_data->game->roundCards.IsEmpty();
-
-			if (canSkip)
-			{
-				Screen::SkipButton skipButton;
-				const sf::Vector2f center(0.5f * size.x, size.y - 1.5f * Screen::Card{}.getSize().y);
-				skipButton.setOrigin(center);
-				_window.draw(skipButton);
-
-				if (::isPointInRectange(center, Screen::SkipButton::Size, Screen::SkipButton::Size, _data->cursorPosition, interactOffset))
-				{
-					_data->userPick->result.emplace();
-					cursorType = sf::Cursor::Hand;
-				}
-			}
-
-			if (auto pick = userCards.Pick(_data->cursorPosition, interactOffset, _data->userPick->options.filter))
-			{
-				_data->userPick->result.emplace(std::move(pick));
-				cursorType = sf::Cursor::Hand;
-			}
-		}
-		userCards.Hover(_data->userPick && _data->userPick->result && _data->userPick->result->card ? _data->userPick->result->card : std::nullopt);
 
 		if (_data->arrow)
 		{

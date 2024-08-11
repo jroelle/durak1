@@ -2,21 +2,14 @@
 #include <stdint.h>
 #include <memory>
 #include "Player.h"
+#include "Settings.h"
 
 class Bot final : public Player
 {
 public:
 	class Behavior;
-	enum class Difficulty : uint8_t
-	{
-		Easy,
-		Medium,
-		Hard,
 
-		Count,
-	};
-
-	Bot(Id, Difficulty);
+	Bot(Id, Settings::Difficulty);
 	~Bot();
 
 protected:

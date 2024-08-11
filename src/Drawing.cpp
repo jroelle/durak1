@@ -435,16 +435,22 @@ namespace Screen
 	{
 	}
 
+	void Text::set(const sf::String& string)
+	{
+		_string = string;
+	}
+
+	sf::FloatRect Text::getLocalBounds() const
+	{
+		return createText().getLocalBounds();
+	}
+
 	void Text::run(sf::RenderTarget& target) const
 	{
-		sf::Text text(_string, getFont(), CharacterSize);
+		sf::Text text = createText();
 		text.setFillColor(Color::LightGrayGreen);
 		text.setOutlineColor(Color::DarkBrown);
 		text.setOutlineThickness(1.f);
-
-		const auto size = text.getLocalBounds().getSize();
-		text.setOrigin({ 0.5f * size.x, size.y });
-
 		target.draw(text);
 	}
 
@@ -452,5 +458,13 @@ namespace Screen
 	{
 		static sf::Font font = loadFont("Flexi_IBM_VGA_False_0.ttf");
 		return font;
+	}
+
+	sf::Text Text::createText() const
+	{
+		sf::Text text(_string, getFont(), CharacterSize);
+		const auto size = text.getLocalBounds().getSize();
+		text.setOrigin({ 0.5f * size.x, size.y });
+		return text;
 	}
 }

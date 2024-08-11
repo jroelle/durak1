@@ -31,6 +31,7 @@ add_executable(durak1 main.cpp
 					"inc/Random.hpp"
 					"inc/Round.h"
 					"src/Round.cpp"
+					"inc/Settings.h"
 					"inc/UI.h"
 					"src/UI.cpp"
 					"inc/User.h"

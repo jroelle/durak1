@@ -8,9 +8,9 @@ Context::Context(std::weak_ptr<UI> ui)
 {
 }
 
-void Context::Setup(size_t botsNumber)
+void Context::Setup(const Settings& settings)
 {
-	_players = std::make_unique<PlayersGroup>(botsNumber);
+	_players = std::make_unique<PlayersGroup>(settings);
 	EventHandlers::Get().OnPlayersCreated(*_players);
 	_trumpSuit = _deck.GetLast()->GetSuit();
 	_players->DrawCards(_deck, _players->GetUser());

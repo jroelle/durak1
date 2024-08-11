@@ -15,7 +15,7 @@ public:
 	Behavior(Bot&);
 	virtual ~Behavior() = default;
 
-	static std::unique_ptr<Behavior> Create(Bot&, Difficulty);
+	static std::unique_ptr<Behavior> Create(Bot&, Settings::Difficulty);
 
 	std::optional<Card> PickAttackCard(const Context& context, const Player& defender, const CardFilter& filter) const
 	{
@@ -237,19 +237,19 @@ Bot::Behavior::Behavior(Bot& owner)
 {
 }
 
-std::unique_ptr<Bot::Behavior> Bot::Behavior::Create(Bot& owner, Difficulty difficulty)
+std::unique_ptr<Bot::Behavior> Bot::Behavior::Create(Bot& owner, Settings::Difficulty difficulty)
 {
 	switch (difficulty)
 	{
-	case Difficulty::Easy:		return std::make_unique<EasyBehavior>(owner);
-	case Difficulty::Medium:	return std::make_unique<MediumBehavior>(owner);
-	case Difficulty::Hard:		return std::make_unique<HardBehavior>(owner);
+	case Settings::Difficulty::Easy:		return std::make_unique<EasyBehavior>(owner);
+	case Settings::Difficulty::Medium:		return std::make_unique<MediumBehavior>(owner);
+	case Settings::Difficulty::Hard:		return std::make_unique<HardBehavior>(owner);
 	}
 	return nullptr;
 }
 
 
-Bot::Bot(Id id, Difficulty difficulty)
+Bot::Bot(Id id, Settings::Difficulty difficulty)
 	: Player(id)
 	, _behavior(Behavior::Create(*this, difficulty))
 {

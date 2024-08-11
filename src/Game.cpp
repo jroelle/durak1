@@ -6,6 +6,7 @@
 #include "UI.h"
 #include "Event.hpp"
 #include "PlayersGroup.h"
+#include "Settings.h"
 
 namespace
 {
@@ -70,9 +71,9 @@ namespace
 		{
 			callUI([&](UI& ui, const Context& context) { ui.OnPlayerShowTrumpCard(context, player, card); });
 		}
-		void OnStartGame() override
+		void OnStartGame(Settings& settings) override
 		{
-			callUI([&](UI& ui, const Context& context) { ui.OnStartGame(context); });
+			callUI([&](UI& ui, const Context& context) { ui.OnStartGame(context, settings); });
 		}
 		void OnUserWin(const Player& user) override
 		{
@@ -108,8 +109,10 @@ namespace
 
 		auto context = std::make_shared<Context>(ui);
 		GameEventHandler gameEventHandler(context);
-		EventHandlers::Get().OnStartGame();
-		context->Setup(1);
+
+		Settings settings;
+		EventHandlers::Get().OnStartGame(settings);
+		context->Setup(settings);
 
 		Player* firstPlayer = findFirstPlayer(context->GetPlayers(), context->GetTrumpSuit());
 		if (!firstPlayer)

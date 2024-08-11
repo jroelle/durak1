@@ -8,6 +8,7 @@
 
 class UI;
 class PlayersGroup;
+struct Settings;
 
 class Context
 {
@@ -17,7 +18,7 @@ public:
 	Context() = delete;
 	Context(std::weak_ptr<UI>);
 
-	void Setup(size_t botsNumber = 1);
+	void Setup(const Settings&);
 
 	Deck& GetDeck();
 	const Deck& GetDeck() const;

@@ -4,11 +4,12 @@
 #include "Utility.hpp"
 
 class Deck;
+struct Settings;
 
 class PlayersGroup
 {
 public:
-	PlayersGroup(size_t botsNumber = 1);
+	PlayersGroup(const Settings&);
 	~PlayersGroup();
 	void DrawCards(Deck&, Player* start = nullptr);
 

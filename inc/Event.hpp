@@ -10,6 +10,7 @@ class Round;
 class Card;
 class Context;
 class PlayersGroup;
+struct Settings;
 
 class EventHandler
 {
@@ -26,7 +27,7 @@ public:
 
 	virtual void OnPlayersCreated(const PlayersGroup&) {}
 	virtual void OnPlayerShowTrumpCard(const Player&, const Card&) {}
-	virtual void OnStartGame() {}
+	virtual void OnStartGame(Settings&) {}
 	virtual void OnUserWin(const Player& user) {}
 	virtual void OnUserLose(const Player& opponent) {}
 };
@@ -83,9 +84,9 @@ public:
 	{
 		forEach([&](EventHandler* handler) { handler->OnPlayerShowTrumpCard(player, card); });
 	}
-	void OnStartGame() override
+	void OnStartGame(Settings& settings) override
 	{
-		forEach([&](EventHandler* handler) { handler->OnStartGame(); });
+		forEach([&](EventHandler* handler) { handler->OnStartGame(settings); });
 	}
 	void OnUserWin(const Player& user) override
 	{
