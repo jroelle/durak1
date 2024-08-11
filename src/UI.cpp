@@ -20,6 +20,7 @@ namespace
 
 	std::mutex g_mutex;
 	
+	[[nodiscard]]
 	inline std::lock_guard<std::mutex> lockMutex()
 	{
 		return std::lock_guard<std::mutex>(g_mutex);
