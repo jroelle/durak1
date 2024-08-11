@@ -409,7 +409,7 @@ namespace Screen
 
 	void Arrow::run(sf::RenderTarget& target) const
 	{
-		constexpr float arrowHeadOffset = Size * 0.5f;
+		constexpr float arrowHeadOffset = Size * 0.2f;
 
 		Holder<sf::VertexArray> holder(sf::PrimitiveType::Lines, 6);
 		auto& vertices = holder.get();
@@ -417,7 +417,7 @@ namespace Screen
 
 		const sf::Vector2f top = { 0.f, -Size * 0.5f };
 
-		vertices[0].position = { 0.f, Size * 0.5f };
+		vertices[0].position = { 0.f, Size * 1.5f };
 		vertices[1].position = top;
 
 		vertices[2].position = { -arrowHeadOffset, top.y + arrowHeadOffset };
