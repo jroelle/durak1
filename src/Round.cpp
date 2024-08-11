@@ -33,7 +33,8 @@ std::unique_ptr<Round> Round::Run(Context& context)
 
 	bool defenderLost = false;
 	_cards.reserve(MaxAttacksCount * 2);
-	for (size_t attackIndex = 0; attackIndex < std::min(MaxAttacksCount, _defender.GetHand().GetCardCount()); ++attackIndex)
+	const size_t attackCount = std::min(MaxAttacksCount, _defender.GetHand().GetCardCount());
+	for (size_t attackIndex = 0; attackIndex < attackCount; ++attackIndex)
 	{
 		std::optional<Card> attackCard;
 		players.ForEachAttackPlayer([&](Player* attackPlayer)

@@ -2,6 +2,7 @@
 #include <map>
 #include <set>
 #include <thread>
+#include <array>
 #include "Card.h"
 #include "Context.h"
 #include "Event.hpp"
@@ -16,8 +17,34 @@ public:
 
 	static std::unique_ptr<Behavior> Create(Bot&, Difficulty);
 
-	virtual std::optional<Card> PickAttackCard(const Player& defender, const CardFilter&) const = 0;
-	virtual std::optional<Card> PickDefendCard(const Player& attacker, const CardFilter&) const = 0;
+	std::optional<Card> PickAttackCard(const Context& context, const Player& defender, const CardFilter& filter) const
+	{
+		return pickAttackCard(context, defender, getFilteredCards(filter));
+	}
+
+	std::optional<Card> PickDefendCard(const Context& context, const Player& attacker, const CardFilter& filter) const
+	{
+		return pickDefendCard(context, attacker, getFilteredCards(filter));
+	}
+
+protected:
+	virtual std::optional<Card> pickAttackCard(const Context&, const Player& defender, std::vector<Card>&& filteredCards) const = 0;
+	virtual std::optional<Card> pickDefendCard(const Context&, const Player& attacker, std::vector<Card>&& filteredCards) const = 0;
+
+private:
+	std::vector<Card> getFilteredCards(const CardFilter& filter) const
+	{
+		std::vector<Card> filteredCards;
+		const auto& hand = _owner.GetHand();
+		filteredCards.reserve(hand.GetCardCount());
+		for (size_t i = 0; i < hand.GetCardCount(); ++i)
+		{
+			const Card card = hand.GetCard(i);
+			if (!filter || filter(card))
+				filteredCards.push_back(card);
+		}
+		return filteredCards;
+	}
 
 protected:
 	Bot& _owner;
@@ -91,82 +118,104 @@ namespace
 	public:
 		using Behavior::Behavior;
 
-		std::optional<Card> PickAttackCard(const Player& defender, const Bot::CardFilter& filter) const override
+	protected:
+		std::optional<Card> pickAttackCard(const Context& context, const Player& defender, std::vector<Card>&& filteredCards) const override
 		{
-			return pickCard(filter);
+			return randomPick(filteredCards);
 		}
 
-		std::optional<Card> PickDefendCard(const Player& attacker, const Bot::CardFilter& filter) const override
+		std::optional<Card> pickDefendCard(const Context& context, const Player& attacker, std::vector<Card>&& filteredCards) const override
 		{
-			return pickCard(filter);
+			return randomPick(filteredCards);
 		}
 
 	private:
-		static Card randomPick(const std::vector<Card>& filteredCards)
+		static std::optional<Card> randomPick(const std::vector<Card>& filteredCards)
 		{
-			const size_t index = Random::GetNumber(filteredCards.size() - 1);
-			return filteredCards[index];
-		}
-
-		std::optional<Card> pickCard(const Bot::CardFilter& filter) const
-		{
-			std::vector<Card> filteredCards;
-
-			const auto& hand = _owner.GetHand();
-			filteredCards.reserve(hand.GetCardCount());
-			for (size_t i = 0; i < hand.GetCardCount(); ++i)
-			{
-				const Card card = hand.GetCard(i);
-				if (!filter || filter(card))
-					filteredCards.push_back(card);
-			}
-
 			if (filteredCards.empty())
 				return std::nullopt;
 
-			return randomPick(filteredCards);
+			const size_t index = Random::GetNumber(filteredCards.size() - 1);
+			return filteredCards[index];
 		}
 	};
 
-	class MediumBehavior : public Bot::Behavior
+	class MediumBehavior : public EasyBehavior
 	{
 	public:
-		using Behavior::Behavior;
+		using EasyBehavior::EasyBehavior;
 
-		std::optional<Card> PickAttackCard(const Player& defender, const Bot::CardFilter& filter) const override
+	protected:
+		std::optional<Card> pickAttackCard(const Context& context, const Player& defender, std::vector<Card>&& filteredCards) const override
 		{
-			// TODO
-			return std::nullopt;
+			return pickCard(context, 0.5, std::move(filteredCards));
 		}
 
-		std::optional<Card> PickDefendCard(const Player& attacker, const Bot::CardFilter& filter) const override
+		std::optional<Card> pickDefendCard(const Context& context, const Player& attacker, std::vector<Card>&& filteredCards) const override
 		{
-			// TODO
-			return std::nullopt;
+			return pickCard(context, 0.8, std::move(filteredCards));
+		}
+
+		static void sort(std::vector<Card>& cards, Card::Suit trumpSuit)
+		{
+			std::array<size_t, static_cast<size_t>(Card::Suit::Count)> suitCount;
+			suitCount.fill(0);
+			for (const Card& card : cards)
+				++suitCount[static_cast<size_t>(card.GetSuit())];
+
+			std::sort(cards.begin(), cards.end(), [trumpSuit, &suitCount](const Card& a, const Card& b)
+				{
+					if (a.IsTrump(trumpSuit) != b.IsTrump(trumpSuit))
+						return b.IsTrump(trumpSuit); // trump suit -> low priority
+
+					if (a.GetRank() == b.GetRank())
+						return suitCount[static_cast<size_t>(a.GetSuit())] > suitCount[static_cast<size_t>(b.GetSuit())]; // more common suits -> high priority
+
+					return a.GetRank() < b.GetRank();
+				});
+		}
+
+	private:
+		static std::optional<Card> pickCard(const Context& context, double pickTrumpChance, std::vector<Card>&& filteredCards)
+		{
+			if (filteredCards.empty())
+				return std::nullopt;
+
+			sort(filteredCards, context.GetTrumpSuit());
+			const Card& card = filteredCards.front();
+
+			if (card.IsTrump(context.GetTrumpSuit()))
+			{
+				const int chance = static_cast<int>(pickTrumpChance * 100);
+				if (Random::GetNumber(100, 1) > chance)
+					return std::nullopt;
+			}
+			return card;
 		}
 	};
 
-	class HardBehavior : public Bot::Behavior
+	class HardBehavior : public MediumBehavior
 	{
 	public:
-		using Behavior::Behavior;
+		using MediumBehavior::MediumBehavior;
 
-		std::optional<Card> PickAttackCard(const Player& defender, const Bot::CardFilter& filter) const override
+	protected:
+		std::optional<Card> pickAttackCard(const Context& context, const Player& defender, std::vector<Card>&& filteredCards) const override
 		{
 			if (const auto* defenderCards = _memory.GetPlayerCards(defender.GetId()))
 			{
 				// TODO
 			}
-			return std::nullopt;
+			return MediumBehavior::pickAttackCard(context, defender, std::move(filteredCards));
 		}
 
-		std::optional<Card> PickDefendCard(const Player& attacker, const Bot::CardFilter& filter) const override
+		std::optional<Card> pickDefendCard(const Context& context, const Player& attacker, std::vector<Card>&& filteredCards) const override
 		{
 			if (const auto* attackerCards = _memory.GetPlayerCards(attacker.GetId()))
 			{
 				// TODO
 			}
-			return std::nullopt;
+			return MediumBehavior::pickDefendCard(context, attacker, std::move(filteredCards));
 		}
 
 	private:
@@ -205,7 +254,7 @@ std::optional<Card> Bot::pickAttackCard(const Context& context, const Player& de
 {
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 	if (_behavior)
-		return _behavior->PickAttackCard(defender, filter);
+		return _behavior->PickAttackCard(context, defender, filter);
 	return std::nullopt;
 }
 
@@ -213,6 +262,6 @@ std::optional<Card> Bot::pickDefendCard(const Context& context, const Player& at
 {
 	std::this_thread::sleep_for(std::chrono::seconds(1));
 	if (_behavior)
-		return _behavior->PickDefendCard(attacker, filter);
+		return _behavior->PickDefendCard(context, attacker, filter);
 	return std::nullopt;
 }
