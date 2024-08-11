@@ -141,7 +141,7 @@ void Game::Run()
 		{
 			if (event.type == sf::Event::Closed)
 			{
-				window.close();
+				ui->CloseWindow();
 				return;
 			}
 

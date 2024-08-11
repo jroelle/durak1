@@ -29,6 +29,8 @@ public:
 	const sf::RenderWindow& GetWindow() const;
 	bool NeedsToUpdate() const;
 	bool HandleEvent(const sf::Event&);
+	void CloseWindow();
+
 	void Pick(const Context&, std::shared_ptr<UserPick>) override;
 	std::optional<Card> UserPickCard(const Context&, bool attacking, const PickCardFilter&) override;
 	void SetSettings(const Context&, Settings&) override;

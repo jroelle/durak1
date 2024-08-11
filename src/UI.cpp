@@ -17,7 +17,13 @@
 namespace
 {
 	constexpr float InteractOffset = 5.f;
+
 	std::mutex g_mutex;
+	
+	inline std::lock_guard<std::mutex> lockMutex()
+	{
+		return std::lock_guard<std::mutex>(g_mutex);
+	}
 
 	inline sf::Vector2f getCardSize()
 	{
@@ -821,7 +827,7 @@ bool UI::NeedsToUpdate() const
 
 bool UI::HandleEvent(const sf::Event& event)
 {
-	std::lock_guard<std::mutex> guard(g_mutex);
+	auto guard = lockMutex();
 
 	if (!_data)
 		return false;
@@ -844,6 +850,12 @@ bool UI::HandleEvent(const sf::Event& event)
 	}
 
 	return false;
+}
+
+void UI::CloseWindow()
+{
+	auto guard = lockMutex();
+	_window.close();
 }
 
 void UI::Pick(const Context& context, std::shared_ptr<UserPick> userPick)
@@ -1043,7 +1055,7 @@ void UI::animate(const Context& context)
 
 void UI::update(const Context& context, sf::Time delta)
 {
-	std::lock_guard<std::mutex> guard(g_mutex);
+	auto guard = lockMutex();
 
 	if (!NeedsToUpdate() || !_window.isOpen() || !_data)
 		return;
